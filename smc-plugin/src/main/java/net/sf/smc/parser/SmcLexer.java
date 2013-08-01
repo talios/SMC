@@ -67,7 +67,7 @@ import java.util.Map;
         _readIndex = 0;
 
         _lexerFSM = new SmcLexerContext(this);
-        _lexerFSM.setDebugFlag(debugFlag);
+//        _lexerFSM.setDebugFlag(debugFlag);
     } // end of SmcLexer(InputStream, boolean)
 
     //

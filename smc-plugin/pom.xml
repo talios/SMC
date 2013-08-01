@@ -71,7 +71,22 @@
 						<phase>generate-resources</phase>
 						<configuration>
 							<target>
-								<unzip src="${basedir}/lib/Smc.jar" dest="${basedir}/target/classes">
+								<unzip src="${basedir}/lib/SmcGenerator.jar" dest="${basedir}/target/classes">
+									<patternset>
+										<exclude name="META-INF/**" />
+									</patternset>
+								</unzip>
+								<unzip src="${basedir}/lib/SmcModel.jar" dest="${basedir}/target/classes">
+									<patternset>
+										<exclude name="META-INF/**" />
+									</patternset>
+								</unzip>
+								<unzip src="${basedir}/lib/SmcParser.jar" dest="${basedir}/target/classes">
+									<patternset>
+										<exclude name="META-INF/**" />
+									</patternset>
+								</unzip>
+								<unzip src="${basedir}/lib/statemap.jar" dest="${basedir}/target/classes">
 									<patternset>
 										<exclude name="META-INF/**" />
 									</patternset>
