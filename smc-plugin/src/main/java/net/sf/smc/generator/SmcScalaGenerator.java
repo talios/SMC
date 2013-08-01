@@ -32,7 +32,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcScalaGenerator.java,v 1.12 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcScalaGenerator.java,v 1.14 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -40,10 +40,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -151,11 +151,6 @@ public final class SmcScalaGenerator
         }
 
         _source.println();
-
-        if (_serialFlag == true)
-        {
-            _source.println("@serializable");
-        }
 
         // The context clas contains all the state classes as
         // inner classes, so generate the context first rather
@@ -307,15 +302,15 @@ public final class SmcScalaGenerator
         _source.println("}");
         _source.println();
 
-        if (_serialFlag == true)
-        {
-            _source.println("@serializable");
-        }
-
         // Declare the base state class.
         _source.print("class ");
         _source.print(context);
-        _source.println("State(name: String, id: Int) {");
+        _source.print("State(name: String, id: Int)");
+        if (_serialFlag == true)
+        {
+            _source.print(" extends Serializable");
+        }
+        _source.println(" {");
         _source.println("    private val _name = name");
         _source.println("    private val _id = id");
         _source.println();
@@ -516,7 +511,7 @@ public final class SmcScalaGenerator
             _source.print('.');
             _source.print(state.getClassName());
             _source.print("\", ");
-            _source.print(map.getNextStateId());
+            _source.print(SmcMap.getNextStateId());
             _source.println(")");
         }
 
@@ -711,6 +706,7 @@ public final class SmcScalaGenerator
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
@@ -831,6 +827,7 @@ public final class SmcScalaGenerator
         SmcTransition transition = guard.getTransition();
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         String transName = transition.getName();
@@ -1289,7 +1286,7 @@ public final class SmcScalaGenerator
                 _source.print("ctxt.");
 	        _source.print(name);
 	        _source.print("(");
-	
+
 	        for (it = arguments.iterator(), sep = "";
 	             it.hasNext() == true;
 	             sep = ", ")
@@ -1297,7 +1294,7 @@ public final class SmcScalaGenerator
 	            _source.print(sep);
 	            _source.print(it.next());
 	        }
-	
+
 	        _source.println(")");
             }
         }
@@ -1331,6 +1328,12 @@ public final class SmcScalaGenerator
 //
 // CHANGE LOG
 // $Log: SmcScalaGenerator.java,v $
+// Revision 1.14  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
+// Revision 1.13  2012/05/13 21:31:14  fperrad
+// fix deprecation with Scala 2.9.1
+//
 // Revision 1.12  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

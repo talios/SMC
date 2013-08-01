@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcHeaderCGenerator.java,v 1.11 2010/12/01 15:29:09 fperrad Exp $
+// $Id: SmcHeaderCGenerator.java,v 1.13 2012/04/21 10:04:06 fperrad Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,10 +34,13 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
+import java.util.Iterator;
 import java.util.List;
-
+import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcFSM;
+import net.sf.smc.model.SmcGuard;
 import net.sf.smc.model.SmcMap;
 import net.sf.smc.model.SmcParameter;
 import net.sf.smc.model.SmcState;
@@ -153,13 +156,6 @@ public final class SmcHeaderCGenerator
         for (String declaration: fsm.getDeclarations())
         {
             _source.print(declaration);
-
-            // Add a semicolon if the user did not use one.
-            if (declaration.endsWith(";") == false)
-            {
-                _source.print(";");
-            }
-
             _source.println();
         }
 
@@ -269,6 +265,56 @@ public final class SmcHeaderCGenerator
             cState = startStateName;
         }
 
+        _source.print("#ifdef NO_");
+        _source.print(targetfileCaps);
+        _source.println("_MACRO");
+
+        // Constructor
+        _source.print("extern void ");
+        _source.print(fsmClassName);
+        _source.print("_Init");
+        _source.print("(struct ");
+        _source.print(fsmClassName);
+        _source.print("*, struct ");
+        _source.print(context);
+        _source.println("*);");
+
+        // EnterStartState method.
+        if (fsm.hasEntryActions() == true)
+        {
+            _source.print("extern void ");
+            _source.print(fsmClassName);
+            _source.print("_EnterStartState(struct ");
+            _source.print(fsmClassName);
+            _source.println("*);");
+        }
+
+        // Generate a method for every transition in every map
+        // *except* the default transition.
+        for (SmcTransition trans: transList)
+        {
+            if (trans.getName().equals("Default") == false)
+            {
+                _source.print("extern void ");
+                _source.print(fsmClassName);
+                _source.print("_");
+                _source.print(trans.getName());
+                _source.print("(struct ");
+                _source.print(fsmClassName);
+                _source.print("*");
+
+                params = trans.getParameters();
+                for (SmcParameter param: params)
+                {
+                    _source.print(", ");
+                    _source.print(param.getType());
+                }
+                _source.println(");");
+            }
+        }
+
+        _source.println("#else");
+
         // Constructor
         _source.print("#define ");
         _source.print(fsmClassName);
@@ -337,6 +383,7 @@ public final class SmcHeaderCGenerator
             }
         }
 
+        _source.println("#endif");
         _source.println();
         _source.println("#endif");
 
@@ -397,6 +444,12 @@ public final class SmcHeaderCGenerator
 //
 // CHANGE LOG
 // $Log: SmcHeaderCGenerator.java,v $
+// Revision 1.13  2012/04/21 10:04:06  fperrad
+// fix 3518773 : remove additional ';' with '%declare'
+//
+// Revision 1.12  2012/01/28 18:03:02  fperrad
+// fix 3476060 : generate both C functions and macros
+//
 // Revision 1.11  2010/12/01 15:29:09  fperrad
 // C: refactor when package
 //

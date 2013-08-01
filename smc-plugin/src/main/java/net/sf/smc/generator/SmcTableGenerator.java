@@ -34,6 +34,7 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
 import net.sf.smc.model.SmcAction;
@@ -412,21 +413,21 @@ public final class SmcTableGenerator
         }
         else if (transType == TransType.TRANS_PUSH)
         {
+            _source.print("  push(");
 
             // If the end state is nil, then replace it with the
             // current map and state.
-            if (!endStateName.equals(
-                    SmcElement.NIL_STATE))
+            if (endStateName.equals(
+                    SmcElement.NIL_STATE) == true)
             {
-                _source.print("  ");
-                _source.print(endStateName);
-                _source.print("/push(");
-            } else { 
-                _source.print("  push(");
-            }
                 _source.print(mapName);
                 _source.print("::");
                 _source.print(stateName);
+            }
+            else
+            {
+                _source.print(endStateName);
+            }
 
             _source.println(")");
         }

@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcJavaGenerator.java,v 1.11 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcJavaGenerator.java,v 1.12 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -38,6 +38,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -141,13 +142,20 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         }
 
         _source.println("import org.slf4j.*;");
-        
+
         // Do user-specified imports now.
         for (String imp: fsm.getImports())
         {
             _source.print("import ");
             _source.print(imp);
             _source.println(";");
+        }
+
+        // If the -g option was specified, then import the
+        // PrintStream class.
+        if (_debugLevel >= DEBUG_LEVEL_0)
+        {
+            _source.println("import java.io.PrintStream;");
         }
 
         if (_reflectFlag == true)
@@ -553,13 +561,25 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         _source.print(fsmClassName);
         _source.println(" context)");
         _source.println("        {");
-        _source.println("            if (log.isTraceEnabled())");
-        _source.println("            {");
-        _source.print(_indent);
-        _source.println("                log.trace(");
-        _source.println("                    \"TRANSITION   : Default [\" + context.getName() + \"]\");");
-        _source.println("            }");
-        _source.println(); 
+
+        if (_debugLevel >= DEBUG_LEVEL_0)
+        {
+            _source.println(
+                "            if (context.getDebugFlag() == true)");
+            _source.println("            {");
+            _source.println(
+                "                PrintStream str = ");
+            _source.println(
+                "                    context.getDebugStream();");
+            _source.println();
+            _source.println(
+                "                str.println(");
+            _source.println(
+                "                    \"TRANSITION   : Default\");");
+            _source.println("            }");
+            _source.println();
+        }
+
         _source.println("            throw (");
         _source.println(
             "                new statemap.TransitionUndefinedException(");
@@ -681,7 +701,7 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
      * @param map emit Java code for this map.
      */
     @Override
-    public void visit(SmcMap map) 
+    public void visit(SmcMap map)
     {
         List<SmcTransition> definedDefaultTransitions;
         SmcState defaultState = map.getDefaultState();
@@ -1159,6 +1179,7 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
@@ -1194,31 +1215,29 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         }
 
         _source.println();
-        
-        _source.print(_indent);
-        _source.println("    if (log.isTraceEnabled())");
-        _source.print(_indent);
-        _source.println("    {");
-        _source.print(_indent);
-        _source.print("        log.trace(\"TRANSITION   : ");
-        _source.print(transition.signature());
-        _source.println(" [\" + context.getName() + \"]\");");
-        _source.print(_indent);
-        _source.println("    }");
 
         // Output state exit.
-        _source.print(_indent);
-        _source.println("    if (log.isTraceEnabled())");
-        _source.print(_indent);
-        _source.println("    {");
-        _source.print(_indent);
-        _source.print("        log.trace(\"LEAVING STATE   : ");
-        _source.print(mapName);
-        _source.print('.');
-        _source.print(stateName);
-        _source.println(" [\" + context.getName() + \"]\");");
-        _source.print(_indent);
-        _source.println("    }");
+        if (_debugLevel >= DEBUG_LEVEL_0)
+        {
+            _source.print(_indent);
+            _source.println(
+                "    if (context.getDebugFlag() == true)");
+            _source.print(_indent);
+            _source.println("    {");
+            _source.print(_indent);
+            _source.print("        PrintStream str = ");
+            _source.println("context.getDebugStream();");
+            _source.println();
+            _source.print(_indent);
+            _source.print(
+                "        str.println(\"LEAVING STATE   : ");
+            _source.print(mapName);
+            _source.print('.');
+            _source.print(stateName);
+            _source.println("\");");
+            _source.print(_indent);
+            _source.println("    }");
+        }
 
         // Loop through the guards and print each one.
         for (git = guards.iterator(),
@@ -1431,38 +1450,59 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         // v. 1.0, beta 3: Not any more. The exit actions are
         // executed only if 1) this is a standard, non-loopback
         // transition or a pop transition.
-        if (transType == TransType.TRANS_POP || loopbackFlag == false) { 
-            _source.print(_indent);
-            _source.println("    if (log.isTraceEnabled())");
-            _source.print(_indent);
-            _source.println("{");
-            _source.print(_indent);
-            _source.print("        log.trace(\"BEFORE EXIT     : ");
-            _source.print(mapName);
-            _source.print('.');
-            _source.print(stateName);
-            _source.println(".Exit(context) [\" + context.getName() + \"]\");");
-            _source.print(indent2);
-            _source.println("}");
-            _source.println();
+        if (transType == TransType.TRANS_POP ||
+            loopbackFlag == false)
+        {
+            if (_debugLevel >= DEBUG_LEVEL_1)
+            {
+                String sep;
+
+                _source.print(indent2);
+                _source.println(
+                    "if (context.getDebugFlag() == true)");
+                _source.print(indent2);
+                _source.println("{");
+                _source.print(indent2);
+                _source.print("    PrintStream str = ");
+                _source.println("context.getDebugStream();");
+                _source.println();
+                _source.print(indent2);
+                _source.print(
+                    "    str.println(\"BEFORE EXIT     : ");
+                _source.print(stateName);
+                _source.println(".Exit(context)\");");
+                _source.print(indent2);
+                _source.println("}");
+                _source.println();
+            }
 
             _source.print(indent2);
             _source.println(
                 "(context.getState()).Exit(context);");
- 
-            _source.print(_indent);
-            _source.println("    if (log.isTraceEnabled())");
-            _source.print(_indent);
-            _source.println("{");
-            _source.print(_indent);
-            _source.print("        log.trace(\"AFTER EXIT      : ");
-            _source.print(mapName);
-            _source.print('.');
-            _source.print(stateName);
-            _source.println(".Exit(context) [\" + context.getName() + \"]\");");
-            _source.print(indent2);
-            _source.println("    }");
-            _source.println();
+
+            if (_debugLevel >= DEBUG_LEVEL_1)
+            {
+                String sep;
+
+                _source.println();
+                _source.print(indent2);
+                _source.println(
+                    "if (context.getDebugFlag() == true)");
+                _source.print(indent2);
+                _source.println("{");
+                _source.print(indent2);
+                _source.print("    PrintStream str = ");
+                _source.println("context.getDebugStream();");
+                _source.println();
+                _source.print(indent2);
+                _source.print(
+                    "    str.println(\"AFTER EXIT      : ");
+                _source.print(stateName);
+                _source.println(".Exit(context)\");");
+                _source.print(indent2);
+                _source.println("    }");
+                _source.println();
+            }
 
         }
 
@@ -1481,13 +1521,17 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
             }
 
             _source.print(_indent);
-            _source.println("if (log.isTraceEnabled())");
+            _source.println(
+                "if (context.getDebugFlag() == true)");
             _source.print(_indent);
             _source.println("{");
             _source.print(_indent);
-            _source.print("    log.trace(\"ENTER TRANSITION: ");
-            _source.print(mapName);
-            _source.print('.');
+            _source.print("    PrintStream str = ");
+            _source.println("context.getDebugStream();");
+            _source.println();
+            _source.print(_indent);
+            _source.print(
+                "    str.println(\"ENTER TRANSITION: ");
             _source.print(stateName);
             _source.print('.');
             _source.print(transName);
@@ -1582,13 +1626,17 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
             _indent = indent3;
 
             _source.print(_indent);
-            _source.println("if (log.isTraceEnabled())");
+            _source.println(
+                "if (context.getDebugFlag() == true)");
             _source.print(_indent);
             _source.println("{");
             _source.print(_indent);
-            _source.print("    log.trace(\"EXIT TRANSITION : ");
-            _source.print(mapName);
-            _source.print('.');
+            _source.print("    PrintStream str = ");
+            _source.println("context.getDebugStream();");
+            _source.println();
+            _source.print(_indent);
+            _source.print(
+                "    str.println(\"EXIT TRANSITION : ");
             _source.print(stateName);
             _source.print('.');
             _source.print(transName);
@@ -1665,39 +1713,56 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
              loopbackFlag == false) ||
              transType == TransType.TRANS_PUSH)
         {
+            if (_debugLevel >= DEBUG_LEVEL_1)
+            {
+                String sep;
 
-            _source.println();
-            _source.print(indent3);
-            _source.println("if (log.isTraceEnabled())");
-            _source.print(indent3);
-            _source.println("{");
-            _source.print(indent3);
-            _source.print("    log.trace(\"BEFORE ENTRY    : ");
-            _source.print(mapName);
-            _source.print('.');
-            _source.print(stateName);
-            _source.println(".Entry(context) [\" + context.getName() + \"]\");");
-            _source.print(indent3);
-            _source.println("}");
-            _source.println();
+                _source.println();
+                _source.print(indent3);
+                _source.println(
+                    "if (context.getDebugFlag() == true)");
+                _source.print(indent3);
+                _source.println("{");
+                _source.print(indent3);
+                _source.print("    PrintStream str = ");
+                _source.println("context.getDebugStream();");
+                _source.println();
+                _source.print(indent3);
+                _source.print(
+                    "    str.println(\"BEFORE ENTRY    : ");
+                _source.print(fqEndStateName);
+                _source.println(".Entry(context)\");");
+                _source.print(indent3);
+                _source.println("}");
+                _source.println();
+            }
 
             _source.print(indent3);
             _source.println(
                 "(context.getState()).Entry(context);");
 
-            _source.println();
-            _source.print(indent3);
-            _source.println("if (log.isTraceEnabled())");
-            _source.print(indent3);
-            _source.println("{");
-            _source.print(indent3);
-            _source.print("    log.trace(\"AFTER ENTRY     : ");
-            _source.print(mapName);
-            _source.print('.');
-            _source.print(stateName);
-            _source.println(".Entry(context) [\" + context.getName() + \"]\");");
-            _source.print(indent3);
-            _source.println("}");
+            if (_debugLevel >= DEBUG_LEVEL_1)
+            {
+                String sep;
+
+                _source.println();
+                _source.print(indent3);
+                _source.println(
+                    "if (context.getDebugFlag() == true)");
+                _source.print(indent3);
+                _source.println("{");
+                _source.print(indent3);
+                _source.print("    PrintStream str = ");
+                _source.println("context.getDebugStream();");
+                _source.println();
+                _source.print(indent3);
+                _source.print(
+                    "    str.println(\"AFTER ENTRY     : ");
+                _source.print(fqEndStateName);
+                _source.println(".Entry(context)\");");
+                _source.print(indent3);
+                _source.println("}");
+            }
         }
 
         // If there was a try/finally, then put the closing
@@ -1815,6 +1880,7 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         final List<SmcMap> maps,
         final List<SmcTransition> transitions)
     {
+        String mapName;
 
         _source.print("        _transitions = new TreeSet");
         if (_genericFlag == true)
@@ -1866,6 +1932,9 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
 //
 // CHANGE LOG
 // $Log: SmcJavaGenerator.java,v $
+// Revision 1.12  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.11  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

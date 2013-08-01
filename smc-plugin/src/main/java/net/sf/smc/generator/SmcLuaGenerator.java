@@ -28,7 +28,7 @@
 //   examples/Python.
 //
 // RCS ID
-// $Id: SmcLuaGenerator.java,v 1.16 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcLuaGenerator.java,v 1.18 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -36,10 +36,11 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.StringTokenizer;
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -94,6 +95,7 @@ public final class SmcLuaGenerator
      */
     public void visit(SmcFSM fsm)
     {
+        String packageName = fsm.getPackage();
         String context = fsm.getContext();
         String fsmClassName = fsm.getFsmClassName();
         String rawSource = fsm.getSource();
@@ -104,6 +106,7 @@ public final class SmcLuaGenerator
         List<SmcParameter> params;
         String mapName;
         String transName;
+        int packageDepth = 0;
         int index;
 
         _source.println("-- ex: set ro:");
@@ -488,7 +491,7 @@ public final class SmcLuaGenerator
         _source.print('.');
         _source.print(stateName);
         _source.print("', ");
-        _source.print(map.getNextStateId());
+        _source.print(SmcMap.getNextStateId());
         _source.println(")");
 
         // Add the Entry() and Exit() member functions if this
@@ -633,13 +636,16 @@ public final class SmcLuaGenerator
     {
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String packageName = map.getFSM().getPackage();
         String mapName = map.getName();
         String stateName = state.getClassName();
+        String instanceName = state.getInstanceName();
         String transName = transition.getName();
         List<SmcParameter> parameters =
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
         String indent2;
@@ -720,14 +726,21 @@ public final class SmcLuaGenerator
             _source.print("        ");
             _source.print(mapName);
             _source.print(".Default:");
-            _source.print(transName);
-            _source.print("(fsm");
-
-            // Add user-defined parameters.
-            for (SmcParameter param: parameters)
+            if (instanceName.equals("DefaultState") == false)
             {
-                _source.print(", ");
-                _source.print(param.getName());
+                _source.print(transName);
+                _source.print("(fsm");
+
+                // Add user-defined parameters.
+                for (SmcParameter param: parameters)
+                {
+                    _source.print(", ");
+                    _source.print(param.getName());
+                }
+            }
+            else
+            {
+                _source.print("Default(fsm");
             }
             _source.println(")");
             _source.print(_indent);
@@ -755,6 +768,7 @@ public final class SmcLuaGenerator
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
         String packageName = map.getFSM().getPackage();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         String transName = transition.getName();
@@ -1312,6 +1326,12 @@ public final class SmcLuaGenerator
 //
 // CHANGE LOG
 // $Log: SmcLuaGenerator.java,v $
+// Revision 1.18  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
+// Revision 1.17  2012/05/13 16:31:10  fperrad
+// fix 3525846 : endless recursion with guarded transitions in Default state
+//
 // Revision 1.16  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

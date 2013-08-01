@@ -39,7 +39,7 @@
 // code in the user specified target language.
 //
 // RCS ID
-// $Id: Smc.java,v 1.42 2011/11/20 16:29:53 cwrapp Exp $
+// $Id: Smc.java,v 1.43 2013/07/14 14:32:37 cwrapp Exp $
 //
 // CHANGE LOG
 // (See bottom of file.)
@@ -49,31 +49,32 @@ package net.sf.smc;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
-
 import net.sf.smc.generator.SmcCGenerator;
-import net.sf.smc.generator.SmcCSharpGenerator;
 import net.sf.smc.generator.SmcCodeGenerator;
 import net.sf.smc.generator.SmcCppGenerator;
+import net.sf.smc.generator.SmcCSharpGenerator;
 import net.sf.smc.generator.SmcGraphGenerator;
 import net.sf.smc.generator.SmcGroovyGenerator;
-import net.sf.smc.generator.SmcHeaderCGenerator;
 import net.sf.smc.generator.SmcHeaderGenerator;
+import net.sf.smc.generator.SmcHeaderCGenerator;
 import net.sf.smc.generator.SmcHeaderObjCGenerator;
-import net.sf.smc.generator.SmcJSGenerator;
 import net.sf.smc.generator.SmcJavaGenerator;
+import net.sf.smc.generator.SmcJSGenerator;
 import net.sf.smc.generator.SmcLuaGenerator;
 import net.sf.smc.generator.SmcObjCGenerator;
 import net.sf.smc.generator.SmcOptions;
@@ -140,7 +141,7 @@ public final class Smc
         _outputDirectory = null;
         _headerDirectory = null;
         _suffix = null;
-        _hsuffix = null;
+        _hsuffix = SmcCodeGenerator.DEFAULT_HEADER_SUFFIX;
         _accessLevel = null;
 
         // Process the command line.
@@ -155,6 +156,7 @@ public final class Smc
             SmcParser parser;
             SmcFSM fsm;
             Iterator<String> sit;
+            boolean checkFlag;
             long startTime = 0;
             long finishTime;
             long totalStartTime = 0;
@@ -171,7 +173,7 @@ public final class Smc
                      sit.hasNext() == true;
                     )
                 {
-                    _sourceFileName = sit.next();
+                    _sourceFileName = (String) sit.next();
 
                     if (_verbose == true)
                     {
@@ -1071,6 +1073,7 @@ public final class Smc
         stream.print(" [-nostreams]");
         stream.print(" [-version]");
         stream.print(" [-verbose]");
+        stream.print(" [-vverbose]");
         stream.print(" [-help]");
         stream.print(" [-sync]");
         stream.print(" [-noex]");
@@ -1110,6 +1113,8 @@ public final class Smc
         stream.print("\t-version  Print smc version ");
         stream.println("information to standard out and exit");
         stream.print("\t-verbose  ");
+        stream.println("Output compiler messages (SMC is silent by default).");
+        stream.print("\t-vverbose  ");
         stream.println("Output more compiler messages.");
         stream.print("\t-help     Print this message to ");
         stream.println("standard out and exit");
@@ -1268,6 +1273,7 @@ public final class Smc
                                  srcFileBase,
                                  _outputDirectory,
                                  _headerDirectory,
+                                 _hsuffix,
                                  _castType,
                                  _graphLevel,
                                  _serial,
@@ -1382,7 +1388,6 @@ public final class Smc
     // + Whether the language also generates a header file and
     //   that header file SmcCodeGenerator subclass.
 
-    @SuppressWarnings("rawtypes")
     /* package */ static final class Language
     {
     //-----------------------------------------------------------
@@ -1564,7 +1569,6 @@ public final class Smc
     private static String _suffix;
 
     // Append this suffix to the end of the output header file.
-    @SuppressWarnings("unused")
     private static String _hsuffix;
 
     // Place the output files in this directory. May be null.
@@ -1645,7 +1649,7 @@ public final class Smc
     /* package */ static Language _targetLanguage;
 
     private static final String APP_NAME = "smc";
-    private static final String VERSION = "v. 6.1.0";
+    private static final String VERSION = "v. 6.2.0";
 
     // Command line option flags.
     private static final String ACCESS_FLAG = "-access";
@@ -1665,6 +1669,7 @@ public final class Smc
     private static final String REFLECT_FLAG = "-reflect";
     private static final String RETURN_FLAG = "-return";
     private static final String SERIAL_FLAG = "-serial";
+    private static final String SILENT_FLAG = "-silent";
     private static final String SUFFIX_FLAG = "-suffix";
     private static final String SYNC_FLAG = "-sync";
     private static final String VERBOSE_FLAG = "-verbose";
@@ -1935,6 +1940,9 @@ public final class Smc
 //
 // CHANGE LOG
 // $Log: Smc.java,v $
+// Revision 1.43  2013/07/14 14:32:37  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.42  2011/11/20 16:29:53  cwrapp
 // Check in for SMC v. 6.1.0
 //

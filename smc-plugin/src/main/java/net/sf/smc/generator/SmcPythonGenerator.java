@@ -30,7 +30,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcPythonGenerator.java,v 1.13 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcPythonGenerator.java,v 1.16 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -38,10 +38,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -104,6 +104,7 @@ public final class SmcPythonGenerator
         List<SmcMap> maps = fsm.getMaps();
         List<SmcTransition> transitions;
         List<SmcParameter> params;
+        String transName;
         int index;
 
         _source.println("# ex: set ro:");
@@ -420,7 +421,7 @@ public final class SmcPythonGenerator
             _source.print('.');
             _source.print(state.getClassName());
             _source.print("', ");
-            _source.print(map.getNextStateId());
+            _source.print(SmcMap.getNextStateId());
             _source.println(")");
         }
 
@@ -591,13 +592,16 @@ public final class SmcPythonGenerator
     {
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
+        String instanceName = state.getInstanceName();
         String transName = transition.getName();
         List<SmcParameter> parameters =
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
@@ -668,8 +672,16 @@ public final class SmcPythonGenerator
             // Call the super class' transition method using
             // the class name.
             _source.print("            ");
-            _source.print(mapName);
-            _source.print("_Default.");
+            if (instanceName.equals("DefaultState") == false)
+            {
+                _source.print(mapName);
+                _source.print("_Default.");
+            }
+            else
+            {
+                _source.print(context);
+                _source.print("State.");
+            }
             _source.print(transName);
             _source.print("(self, fsm");
 
@@ -700,6 +712,7 @@ public final class SmcPythonGenerator
         SmcTransition transition = guard.getTransition();
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         String transName = transition.getName();
@@ -904,8 +917,6 @@ public final class SmcPythonGenerator
                 _source.println("pass");
             }
             // If there are:
-            // 1. No entry actions,
-            // 2. No exit actions,
             // 3. Only one guard,
             // 4. No condition,
             // 5. No actions,
@@ -913,10 +924,6 @@ public final class SmcPythonGenerator
             // 7. No debug code being generated.
             // then give this transition a pass.
             else if (_guardCount == 1 &&
-                     (entryActions == null ||
-                      entryActions.isEmpty() == true) &&
-                     (exitActions == null ||
-                      exitActions.isEmpty() == true) &&
                      transType != TransType.TRANS_PUSH &&
                      transType != TransType.TRANS_POP &&
                      loopbackFlag == true &&
@@ -1219,6 +1226,15 @@ public final class SmcPythonGenerator
 //
 // CHANGE LOG
 // $Log: SmcPythonGenerator.java,v $
+// Revision 1.16  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
+// Revision 1.15  2012/05/13 16:31:10  fperrad
+// fix 3525846 : endless recursion with guarded transitions in Default state
+//
+// Revision 1.14  2012/04/18 07:43:38  fperrad
+// fix #3519013
+//
 // Revision 1.13  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

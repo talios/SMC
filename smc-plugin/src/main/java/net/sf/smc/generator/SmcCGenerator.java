@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcCGenerator.java,v 1.13 2010/12/01 15:29:09 fperrad Exp $
+// $Id: SmcCGenerator.java,v 1.16 2013/07/14 14:32:37 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,10 +34,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -108,13 +108,20 @@ public final class SmcCGenerator
      */
     public void visit(SmcFSM fsm)
     {
+        String targetfileCaps;
         String packageName = fsm.getPackage();
         String rawSource = fsm.getSource();
         String context = fsm.getContext();
         String fsmClassName = fsm.getFsmClassName();
         String mapName;
+        String startStateName = fsm.getStartState();
         List<SmcTransition> transList;
+        String separator;
         List<SmcParameter> params;
+        String declaration;
+        String cState;
+        int packageDepth = 0;
+        int index;
 
         _source.println("/*");
         _source.println(" * ex: set ro:");
@@ -131,6 +138,7 @@ public final class SmcCGenerator
         {
             context = packageName + "_" + context;
             fsmClassName = packageName + "_" + fsmClassName;
+            startStateName = packageName + "_" + startStateName;
         }
 
         // Dump out the raw source code, if any.
@@ -158,8 +166,10 @@ public final class SmcCGenerator
              _srcDirectory.equals(_headerDirectory) == false))
         {
             // They are in different directories. Prepend the
-            // header directory to the file name.
-            _source.print(_headerDirectory);
+            // path from the source file directory to the header
+            // file directory.
+            _source.print(
+                findPath(_srcDirectory, _headerDirectory));
         }
         // Else they are in the same directory.
         else if (_srcDirectory != null)
@@ -167,7 +177,7 @@ public final class SmcCGenerator
             _source.print(_srcDirectory);
         }
         _source.print(_targetfileBase);
-        _source.println(".h\"");
+        _source.format(".%s\"%n", _headerSuffix);
 
         // Print out the default definitions for all the
         // transitions. First, get the transitions list.
@@ -344,6 +354,113 @@ public final class SmcCGenerator
             map.accept(this);
         }
 
+        // Make the file name upper case and replace
+        // slashes with underscores.
+        targetfileCaps = _targetfileBase.replace('\\', '_');
+        targetfileCaps = targetfileCaps.replace('/', '_');
+        targetfileCaps = targetfileCaps.toUpperCase();
+        _source.println();
+        _source.print("#ifdef NO_");
+        _source.print(targetfileCaps);
+        _source.println("_MACRO");
+
+        // The state name "map::state" must be changed to
+        // "map_state".
+        if ((index = startStateName.indexOf("::")) >= 0)
+        {
+            cState =
+                    startStateName.substring(0, index) +
+                    "_" +
+                startStateName.substring(index + 2);
+        }
+        else
+        {
+            cState = startStateName;
+        }
+
+        // Constructor.
+        _source.print("void ");
+        _source.print(fsmClassName);
+        _source.print("_Init");
+        _source.print("(struct ");
+        _source.print(fsmClassName);
+        _source.print("* fsm, struct ");
+        _source.print(context);
+        _source.println("* owner)");
+        _source.println("{");
+        _source.print("    FSM_INIT(fsm, &");
+        _source.print(cState);
+        _source.println(");");
+        _source.println("    fsm->_owner = owner;");
+        _source.println("}");
+
+        // EnterStartState method.
+        if (fsm.hasEntryActions() == true)
+        {
+            _source.println();
+            _source.print("void ");
+            _source.print(fsmClassName);
+            _source.print("_EnterStartState(struct ");
+            _source.print(fsmClassName);
+            _source.println("* fsm)");
+            _source.println("{");
+            _source.println("    ENTRY_STATE(getState(fsm));");
+            _source.println("}");
+        }
+
+        // Generate the context class.
+        // Generate a method for every transition in every map
+        // *except* the default transition.
+        for (SmcTransition trans: transList)
+        {
+            if (trans.getName().equals("Default") == false)
+            {
+                _source.println();
+                _source.print("void ");
+                _source.print(fsmClassName);
+                _source.print("_");
+                _source.print(trans.getName());
+                _source.print("(struct ");
+                _source.print(fsmClassName);
+                _source.print("* fsm");
+
+                params = trans.getParameters();
+                for (SmcParameter param: params)
+                {
+                    _source.print(", ");
+                    _source.print(param.getType());
+                    _source.print(" ");
+                    _source.print(param.getName());
+                }
+                _source.println(")");
+                _source.println("{");
+
+                _source.print("    const struct ");
+                _source.print(context);
+                _source.println("State* state = getState(fsm);");
+                _source.println();
+
+                _source.println("    assert(state != NULL);");
+                _source.print("    setTransition(fsm, \"");
+                _source.print(trans.getName());
+                _source.println("\");");
+                _source.print("    state->");
+                _source.print(trans.getName());
+                _source.print("(fsm");
+                for (SmcParameter param: params)
+                {
+                    _source.print(", ");
+                    _source.print(param.getName());
+                }
+                _source.println(");");
+                _source.println("    setTransition(fsm, NULL);");
+
+                _source.println("}");
+            }
+        }
+        _source.println("#endif");
+
+
         _source.println();
         _source.println("/*");
         _source.println(" * Local variables:");
@@ -442,8 +559,7 @@ public final class SmcCGenerator
             _source.print("_");
             _source.print(stateName);
             _source.print("), ");
-            _source.print(
-                Integer.toString(map.getNextStateId()));
+            _source.print(SmcMap.getNextStateId());
              if (_debugLevel >= DEBUG_LEVEL_0)
              {
                 _source.print(", \"");
@@ -717,8 +833,16 @@ public final class SmcCGenerator
 
             _source.println("    else {");
             _source.print("        ");
-            _source.print(mapName);
-            _source.print("_DefaultState_");
+            if (stateName.equals("DefaultState") == false)
+            {
+                _source.print(mapName);
+                _source.print("_DefaultState_");
+            }
+            else
+            {
+                _source.print(context);
+                _source.print("State_");
+            }
             _source.print(transName);
             _source.print("(fsm");
 
@@ -1320,6 +1444,15 @@ public final class SmcCGenerator
 //
 // CHANGE LOG
 // $Log: SmcCGenerator.java,v $
+// Revision 1.16  2013/07/14 14:32:37  cwrapp
+// check in for release 6.2.0
+//
+// Revision 1.15  2012/05/13 16:31:10  fperrad
+// fix 3525846 : endless recursion with guarded transitions in Default state
+//
+// Revision 1.14  2012/01/28 18:03:02  fperrad
+// fix 3476060 : generate both C functions and macros
+//
 // Revision 1.13  2010/12/01 15:29:09  fperrad
 // C: refactor when package
 //

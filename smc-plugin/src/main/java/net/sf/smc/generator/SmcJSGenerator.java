@@ -3,14 +3,14 @@
 // License Version 1.1 (the "License"); you may not use this file
 // except in compliance with the License. You may obtain a copy
 // of the License at http://www.mozilla.org/MPL/
-//
+// 
 // Software distributed under the License is distributed on an
 // "AS IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
 // implied. See the License for the specific language governing
 // rights and limitations under the License.
-//
+// 
 // The Original Code is State Machine Compiler (SMC).
-//
+// 
 // The Initial Developer of the Original Code is Charles W. Rapp.
 // Portions created by Charles W. Rapp are
 // Copyright (C) 2005 - 2009. Charles W. Rapp.
@@ -37,7 +37,7 @@
 // still should use "Default" for default transitions.
 //
 // RCS ID
-// $Id: SmcPhpGenerator.java,v 1.12 2013/07/14 14:32:38 cwrapp Exp $
+// $Id: SmcJSGenerator.java,v 1.4 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -47,6 +47,8 @@ package net.sf.smc.generator;
 
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Iterator;
 import java.util.List;
 import net.sf.smc.model.SmcAction;
@@ -65,29 +67,57 @@ import net.sf.smc.model.SmcVisitor;
  * @see SmcElement
  * @see SmcCodeGenerator
  * @see SmcVisitor
- * @see SmcOptions
  *
- * @author Toni Arnold
+ * @author Francois Perrad
  */
 
-public final class SmcPhpGenerator
+public final class SmcJSGenerator
     extends SmcCodeGenerator
 {
 //---------------------------------------------------------------
 // Member methods
 //
+    private JSCode jsCode;
 
     //-----------------------------------------------------------
     // Constructors.
     //
 
     /**
-     * Creates a PHP code generator for the given options.
+     * Creates a PHP code generator for the given parameters.
+     * @param srcfileBase write the emitted code to this target
+     * source file name sans the suffix.
+     * @param srcDirectory place the target source file in this
+     * directory.
+     * @param headerDirectory place the target header file in
+     * this directory. Ignored if there is no generated header
+     * file.
+     * @param castType use this type cast (C++ code generation
+     * only).
+     * @param graphLevel amount of detail in the generated
+     * GraphViz graph (graph code generation only).
+     * @param serialFlag if {@code true}, generate unique
+     * identifiers for persisting the FSM.
+     * @param debugFlag if {@code true} add debug output messages
+     * to code.
+     * @param noExceptionFlag if {@code true} then use asserts
+     * rather than exceptions (C++ only).
+     * @param noCatchFlag if {@code true} then do <i>not</i>
+     * generate try/catch/rethrow code.
+     * @param noStreamsFlag if {@code true} then use TRACE macro
+     * for debug output.
+     * @param reflectFlag if {@code true} then generate
+     * reflection code.
+     * @param syncFlag if {@code true} then generate
+     * synchronization code.
+     * @param genericFlag if {@code true} then use generic
+     * collections.
      */
-    public SmcPhpGenerator(final SmcOptions options)
+    public SmcJSGenerator(final SmcOptions options)
     {
-        super (options, "php");
-    } // end of SmcPhpGenerator(SmcOptions)
+        super(options,"js");
+        jsCode = new JSCode();
+    } // end of SmcPhpGenerator(...)
 
     //
     // end of Constructors.
@@ -114,7 +144,6 @@ public final class SmcPhpGenerator
         String transName;
         String separator;
 
-        _source.println("<?php");
         _source.println("/*");
         _source.println(" ex: set ro:");
         _source.println(" DO NOT EDIT.");
@@ -133,30 +162,21 @@ public final class SmcPhpGenerator
             _source.println();
         }
 
-        _source.println("require_once 'StateMachine/statemap.php';");
+        _source.println("//require_once 'StateMachine/statemap.php';");
         _source.println();
 
         // Do user-specified imports now.
         for (String imp: fsm.getImports())
         {
-            _source.print("require_once '");
+            _source.print("//require_once '");
             _source.print(imp);
             _source.println("';");
         }
 
         // Declare the state class.
         _source.println();
-        _source.print("class ");
-        _source.print(context);
-        _source.println("State extends State {");
-
-        _source.println();
-        _source.println("    public function Entry($fsm) {");
-        _source.println("    }");
-        _source.println();
-        _source.println("    public function Exit_($fsm) {");
-        _source.println("    }");
-        _source.println();
+        jsCode.addClass(context+"State","State");
+        jsCode.getCurrentClass().addParams("name,id").addFunction("Entry","fsm","").addFunction("Exit_","fsm","");
 
         // Get the transition list.
         // Generate the default transition definitions.
@@ -168,42 +188,31 @@ public final class SmcPhpGenerator
             // Don't generate the Default transition here.
             if (trans.getName().equals("Default") == false)
             {
-                _source.print("    public function ");
-                _source.print(trans.getName());
-                _source.print("($fsm");
+                jsCode.getCurrentClass().addFunction(trans.getName(),"fsm","this.Default_(fsm);");
 
                 for (SmcParameter param: params)
                 {
-                    _source.print(", ");
-                    param.accept(this);
+                    jsCode.getCurrentClass().getCurrentFunction().addParams(param.getName());
                 }
 
-                _source.println(") {");
-
-                // If this method is reached, that means that
-                // this transition was passed to a state which
-                // does not define the transition. Call the
-                // state's default transition method.
-                _source.println("        $this->Default_($fsm);");
-                _source.println("    }");
-                _source.println();
             }
         }
 
         // Generate the overall Default transition for all maps.
-        _source.println("    public function Default_($fsm) {");
+        //_source.println("    public function Default_($fsm) {");
+        jsCode.getCurrentClass().addFunction("Default_","fsm");
 
-        if (_debugLevel >= DEBUG_LEVEL_0)
+       // if (_debugFlag == true)
         {
-            _source.println(
-                "        if ($fsm->getDebugFlag() == true) {");
-            _source.println(
-                "            fwrite($fsm->getDebugStream(), \"TRANSITION   : Default\\n\");");
-            _source.println(
-                "        }");
+          //  _source.println(
+            //    "        if ($fsm->getDebugFlag() == true) {");
+           // _source.println(
+           //     "            fwrite($fsm->getDebugStream(), \"TRANSITION   : Default\\n\");");
+           // _source.println(
+           //     "        }");
         }
 
-        _source.println(
+        /*_source.println(
             "        $state = $fsm->getState()->getName();");
         _source.println(
             "        $transition = $fsm->getTransition();");
@@ -214,33 +223,16 @@ public final class SmcPhpGenerator
         _source.println("    }");
 
         _source.println("}");   // end of state class
-
+          */
         // Have each map print out its source code now.
         for (SmcMap map: maps)
         {
             map.accept(this);
         }
 
-        // The context class contains all the state classes as
-        // inner classes, so generate the context first rather
-        // than last.
-        _source.println();
-        _source.print("class ");
-        _source.print(context);
-        _source.println("_sm extends FSMContext {");
-        _source.println();
-
-        phpState = phpStateName(startState);
-
-        // Generate the context class' constructor.
-        _source.println("    public function __construct($owner) {");
-        _source.print("        parent::__construct(");
-        _source.print(phpState);
-        _source.println(");");
-        _source.println("        $this->_owner = $owner;");
-
-        _source.println("    }");
-        _source.println();
+       phpState = phpStateName(startState);
+       jsCode.addClass(context+"_sm","FSMContext","owner","this.setState("+phpState+"); this._owner=owner;");
+       // _source.println();
 
         // Generate the transition methods.
         for (SmcTransition trans: transitions)
@@ -250,9 +242,10 @@ public final class SmcPhpGenerator
 
             if (transName.equals("Default") == false)
             {
-                _source.print("    public function ");
-                _source.print(transName);
-                _source.print("(");
+                //_source.print("    public function ");
+                //_source.print(transName);
+                jsCode.getCurrentClass().addFunction(transName);
+                //_source.print("(");
 
                 // Now output the transition's parameters.
                 params = trans.getParameters();
@@ -260,110 +253,43 @@ public final class SmcPhpGenerator
                      pit.hasNext() == true;
                      separator = ", ")
                 {
-                    _source.print(separator);
-                    (pit.next()).accept(this);
+                    //_source.print(separator);
+                    jsCode.getCurrentClass().getCurrentFunction().addParams(pit.next().getName());
+                         
                 }
-                _source.println(") {");
+                //_source.println(") {");
 
                 // Save away the transition name in case it is
                 // need in an UndefinedTransitionException.
-                _source.print("        $this->_transition = \"");
-                _source.print(transName);
-                _source.println("\";");
-
-                _source.print("        $this->getState()->");
-                _source.print(transName);
-                _source.print("($this");
+                jsCode.getCurrentClass().getCurrentFunction().addCode("this._transition = \""+transName+"\";"+
+                                                                 "     this.getState()."+transName+"(this");
 
                 for (pit = params.iterator();
                      pit.hasNext() == true;
                     )
                 {
-                    _source.print(", ");
-                    _source.print((pit.next()).getName());
+                   // _source.print(", ");
+                    jsCode.getCurrentClass().getCurrentFunction().addCode(","+(pit.next()).getName());
                 }
-                _source.println(");");
-                _source.println(
-                    "        $this->_transition = NULL;");
+                jsCode.getCurrentClass().getCurrentFunction().addCode("); this._transition = null;");
 
-                _source.println("    }");
-                _source.println();
+               // _source.println("    }");
+               // _source.println();
             }
         }
 
         // getState() method.
-        _source.println("    public function getState() {");
-        _source.println("        if ($this->_state == NULL) {");
-        _source.println(
-            "            throw new StateUndefinedException();");
-        _source.println("        }");
-        _source.println("        return $this->_state;");
-        _source.println("    }");
-        _source.println();
+       // _source.println("    public function getState() {");
+        jsCode.getCurrentClass().addFunction("getState",""," "+
 
-        // enterStartState()
-        // Execute the start state's entry actions.
-        _source.println("    public function enterStartState() {");
-        _source.println("        $this->_state->Entry($this);");
-        _source.println("    }");
-        _source.println();
-
-        // getOwner() method.
-        _source.println("    public function getOwner() {");
-        _source.println("        return $this->_owner;");
-        _source.println("    }");
-        _source.println();
-
-        if (_reflectFlag == true)
-        {
-            // getStates() method.
-            _source.println("    public function getStates() {");
-            _source.println("        return array(");
-            for (SmcMap map: maps)
-            {
-                String mapName = map.getName();
-
-                _source.print("            ");
-                _source.print(mapName);
-                _source.print("::$Default");
-                _source.println(",");
-
-                for (SmcState state: map.getStates())
-                {
-                    _source.print("            ");
-                    _source.print(mapName);
-                    _source.print("::$");
-                    _source.print(state.getClassName());
-                    _source.println(",");
-                }
-            }
-            _source.println("        );");
-            _source.println("    }");
-            _source.println();
-
-            // getTransitions() method.
-            _source.println("    public function getTransitions() {");
-            _source.println("        return array(");
-            for (SmcTransition trans: transitions)
-            {
-                _source.print("            '");
-                _source.print(trans.getName());
-                _source.println("',");
-            }
-            _source.println("        );");
-            _source.println("    }");
-            _source.println();
-        }
-
-        _source.println("}");      // end of context class
-        _source.println();
-
-        _source.println("/*");
-        _source.println(" Local variables:");
-        _source.println("  buffer-read-only: t");
-        _source.println(" End:");
-        _source.println("*/");
-        _source.println("?>");
+                "       if (this._state == null) {"+
+                "            throw new StateUndefinedException();"+
+                "        }"+
+                "        return this._state;").
+                
+                               addFunction("enterStartState","","this._state.Entry(this);").
+                               addFunction("getOwner","","return this._owner;");
+        _source.print(jsCode.generateCode());
         return;
     } // end of visit(SmcFSM)
 
@@ -394,12 +320,7 @@ public final class SmcPhpGenerator
         }
 
         // Declare the map default state class.
-        _source.println();
-        _source.print("class ");
-        _source.print(mapName);
-        _source.print("_Default extends ");
-        _source.print(context);
-        _source.println("State {");
+        jsCode.addClass(mapName+"_Default",context+"State");
 
         // Declare the user-defined default transitions first.
         for (SmcTransition transition: definedDefaultTransitions)
@@ -418,8 +339,9 @@ public final class SmcPhpGenerator
 
             // Generate the getTransitions() method.
             _source.println();
-            _source.println("    public function getTransitions() {");
-            _source.println("        return array(");
+           // _source.println("    public function getTransitions() {");
+            jsCode.getCurrentClass().addFunction("getTransitions","","return [");
+            //_source.println("        return array(");
 
             // Now place all transition names and states into the
             // map.
@@ -440,18 +362,11 @@ public final class SmcPhpGenerator
                     transDefinition = 0;
                 }
 
-                _source.print("            '");
-                _source.print(transName);
-                _source.print("' => ");
-                _source.print(transDefinition);
-                _source.println(",");
+                jsCode.getCurrentClass().getCurrentFunction().addCode("  '"+transName+"':"+transDefinition+",");
             }
-            _source.println("        );");
-            _source.println("    }");
+            jsCode.getCurrentClass().getCurrentFunction().addCode("        ];");
         }
 
-        _source.println();
-        _source.println("}");   // end of default state class
 
 
         // Have each state now generate its code.
@@ -464,22 +379,21 @@ public final class SmcPhpGenerator
         // In PHP, static objects need to be instantiated
         // outside of the class, see
         // http://ch2.php.net/manual/en/language.oop5.static.php#51627
-        _source.println();
-        _source.print("class ");
-        _source.print(mapName);
-        _source.println(" {");
-
+      //  _source.println();
+      //  _source.print("class ");
+      //  _source.print(mapName);
+      //  _source.println(" {");
+          jsCode.addClass(mapName,"");
         // declare the static members
         for (SmcState state: states)
         {
-            _source.print("    public static $");
-            _source.print(state.getInstanceName());
-            _source.println(";");
+            jsCode.getCurrentClass().addStaticMember(state.getInstanceName(),"new "+mapName+"_"+state.getClassName()+"('"+mapName+"."+state.getClassName()+"',"+SmcMap.getNextStateId()+");");
         }
-        _source.println("    public static $Default_;");
-        _source.println("}");
+        jsCode.getCurrentClass().addStaticMember("Default_"," new "+mapName+"_Default('"+mapName+".Default_',-1);");
+        //_source.println("}");
 
         // after the class declaration, instantiate the static members
+        /* 
         for (SmcState state: states)
         {
             _source.print(mapName);
@@ -507,6 +421,7 @@ public final class SmcPhpGenerator
         _source.print(mapName);
         _source.println(".Default_', -1);");
 
+        */
         return;
     } // end of visit(SmcMap)
 
@@ -516,6 +431,7 @@ public final class SmcPhpGenerator
      */
     public void visit(SmcState state)
     {
+        
         SmcMap map = state.getMap();
         String mapName = map.getName();
         String stateName = state.getClassName();
@@ -524,15 +440,15 @@ public final class SmcPhpGenerator
         boolean needPass = true;
 
         // Declare the state class.
-        _source.println();
-        _source.print("class ");
-        _source.print(mapName);
-        _source.print('_');
-        _source.print(stateName);
-        _source.print(" extends ");
-        _source.print(mapName);
-        _source.println("_Default {");
-
+        //_source.println();
+        //_source.print("class ");
+        //_source.print(mapName);
+        //_source.print('_');
+        //_source.print(stateName);
+        //_source.print(" extends ");
+        //_source.print(mapName);
+        //_source.println("_Default {");
+        jsCode.addClass(mapName+"_"+stateName,mapName+"_Default");
         // Add the Entry() and Exit_() member functions if this
         // state defines them.
         actions = state.getEntryActions();
@@ -540,11 +456,12 @@ public final class SmcPhpGenerator
         {
             needPass = false;
 
-            _source.println();
-            _source.println("    public function Entry($fsm) {");
+         //   _source.println();
+         //   _source.println("    public function Entry($fsm) {");
+            jsCode.getCurrentClass().addFunction("Entry","fsm","ctxt = fsm.getOwner();");
 
             // Declare the "ctxt" local variable.
-            _source.println("        $ctxt = $fsm->getOwner();");
+          //  addCode("        ctxt = fsm.getOwner();");
 
             // Generate the actions associated with this code.
             indent2 = _indent;
@@ -555,7 +472,7 @@ public final class SmcPhpGenerator
             }
             _indent = indent2;
 
-            _source.println("    }");
+           // _source.println("    }");
         }
 
         actions = state.getExitActions();
@@ -563,11 +480,9 @@ public final class SmcPhpGenerator
         {
             needPass = false;
 
-            _source.println();
-            _source.println("    public function Exit_($fsm) {");
-
-            // Declare the "ctxt" local variable.
-            _source.println("        $ctxt = $fsm->getOwner();");
+            //_source.println();
+            //_source.println("    public function Exit_($fsm) {");
+            jsCode.getCurrentClass().addFunction("Exit_","fsm","ctxt = fsm.getOwner();\n");
 
             // Generate the actions associated with this code.
             indent2 = _indent;
@@ -578,7 +493,7 @@ public final class SmcPhpGenerator
             }
             _indent = indent2;
 
-            _source.println("    }");
+           // _source.println("    }");
         }
 
         // Have each transition generate its code.
@@ -614,10 +529,10 @@ public final class SmcPhpGenerator
             }
 
             // Generate the getTransitions() method.
-            _source.println();
-            _source.println("    public function getTransitions() {");
-            _source.println("        return array(");
-
+            //_source.println();
+            //_source.println("    public function getTransitions() {");
+            //_source.println("        return array(");
+              jsCode.getCurrentClass().addFunction("getTransition","return [");
             // Now place all transition names and states into the
             // map.
             for (SmcTransition transition: allTransitions)
@@ -644,21 +559,21 @@ public final class SmcPhpGenerator
                     transDefinition = 0;
                 }
 
-                _source.print("            '");
-                _source.print(transName);
-                _source.print("' => ");
-                _source.print(transDefinition);
-                _source.println(",");
+                //_source.print("            '");
+                jsCode.getCurrentClass().getCurrentFunction().addCode(transName+":"+transDefinition+",");
+              //  _source.print("' => ");
+               // _source.print(transDefinition);
+               // _source.println(",");
             }
-            _source.println("        );");
-            _source.println("    }");
+            jsCode.getCurrentClass().getCurrentFunction().addCode("];");
+            //_source.println("    }");
         }
 
-        _source.println();
-        _source.println("}");
+       // _source.println();
+       // _source.println("}");
 
         // End of this state class declaration.
-
+      
         return;
     } // end of visit(SmcState)
 
@@ -668,6 +583,7 @@ public final class SmcPhpGenerator
      */
     public void visit(SmcTransition transition)
     {
+        
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
         String mapName = map.getName();
@@ -681,18 +597,20 @@ public final class SmcPhpGenerator
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
-        _source.println();
-        _source.print("    public function ");
-        _source.print(sanitizeKeyword(transName));
-        _source.print("($fsm");
+        //_source.println();
+        //_source.print("    public function ");
+        JSClass jsClass = jsCode.getCurrentClass();
+        jsClass.addFunction(sanitizeKeyword(transName),"fsm");
+        JSFunction jsFunc = jsClass.getCurrentFunction();
+       // _source.print("($fsm");
 
         // Add user-defined parameters.
         for (SmcParameter param: parameters)
         {
-            _source.print(", ");
-            param.accept(this);
+         //   _source.print(", ");
+            jsClass.getCurrentFunction().addParams(param.getName());
         }
-        _source.println(") {");
+       // _source.println(") {");
 
         // All transitions have a "ctxt" local variable.
         // 8/14/2003:
@@ -700,23 +618,38 @@ public final class SmcPhpGenerator
         // guard conditions which reference it.
         if (transition.hasCtxtReference() == true)
         {
-            _source.println("        $ctxt = $fsm->getOwner();");
+            jsFunc.addCode("     var   ctxt = fsm.getOwner(); ");
         }
-
+         
         // Output transition to debug stream.
-        if (_debugLevel >= DEBUG_LEVEL_0)
-        {
-            _source.println(
-                "        if ($fsm->getDebugFlag() == true) {");
-            _source.print(
-                "            fwrite($fsm->getDebugStream(), ");
-            _source.print("\"LEAVING STATE   : ");
-            _source.print(mapName);
-            _source.print("::\\$");
-            _source.print(stateName);
-            _source.println("\\n\");");
-            _source.println("        }");
-        }
+       // if (_debugFlag == true)
+       // {
+            String sep;
+
+          //  jsFunc.addCode(
+              //  "        if (fsm.getDebugFlag() == true) {}");
+           /* addCode(
+                "            fwrite(fsm.getDebugStream(), \"TRANSITION   : ");
+            addCode(mapName);
+            addCode("::\\$");
+            addCode(stateName);
+            addCode"->");
+            addCode(transName);
+
+            _source.print("(");
+            for (pit = parameters.iterator(), sep = "";
+                 pit.hasNext() == true;
+                 sep = ", ")
+            {
+                _source.print(sep);
+                (pit.next()).accept(this);
+            }
+            _source.print(");");
+
+            _source.println("\\n\");");*/
+           // _source.println(
+             //   "        }");
+        //}
 
         // Loop through the guards and print each one.
         _indent = "        ";
@@ -743,19 +676,13 @@ public final class SmcPhpGenerator
         // transition.
         if (_guardIndex > 0 && nullCondition == false)
         {
-            if (_guardCount == 1)
-            {
-                _source.println("        }");
-            }
-
-            _source.println("        else {");
+            jsFunc.addCode("        } else {");
 
             // Call the super class' transition method using
             // the "parent" keyword and not the class name.
-            _source.print("            ");
-            _source.print("parent::");
-            _source.print(transName);
-            _source.print("($fsm");
+            jsFunc.addCode("            ");
+            jsFunc.addCode(jsCode.getCurrentClass().getBaseClass()+".prototype."+transName+".apply(this,arguments);");
+           /* _source.print("($fsm");
 
             for (SmcParameter param: parameters)
             {
@@ -763,17 +690,16 @@ public final class SmcPhpGenerator
                 _source.print(param.getName());
             }
 
-            _source.println(");");
-            _source.println("        }");
+            _source.println(");");*/
+           jsFunc.addCode("        }");
         }
         // Need to add a final newline after a multiguard block.
         else if (_guardCount > 1)
         {
-            _source.println();
+         //   _source.println();
         }
 
-        _source.println("    }");
-
+          //  jsFunc.addCode("    }");
         return;
     } // end of visit(SmcTransition)
 
@@ -783,13 +709,13 @@ public final class SmcPhpGenerator
      */
     public void visit(SmcGuard guard)
     {
+        
         SmcTransition transition = guard.getTransition();
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
         String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
-        String transName = transition.getName();
         TransType transType = guard.getTransType();
         boolean loopbackFlag = false;
         String indent2;
@@ -800,7 +726,7 @@ public final class SmcPhpGenerator
         String pushStateName = guard.getPushState();
         String condition = guard.getCondition();
         List<SmcAction> actions = guard.getActions();
-
+        JSFunction jsFunc = jsCode.getCurrentClass().getCurrentFunction();
         // If this guard's end state is not of the form
         // "map::state", then prepend the map name to the
         // state name.
@@ -811,14 +737,14 @@ public final class SmcPhpGenerator
             endStateName.equals(SmcElement.NIL_STATE) == false &&
             endStateName.indexOf("::") < 0)
         {
-            endStateName = mapName + "::" + endStateName;
+            endStateName = mapName + "." + endStateName;
         }
         endStateName = phpStateName(endStateName);
 
         // Qualify the state and push state names as well.
         if (stateName.indexOf("::") < 0)
         {
-            stateName = mapName + "::" + stateName;
+            stateName = mapName + "." + stateName;
         }
         stateName = phpStateName(stateName);
 
@@ -830,7 +756,7 @@ public final class SmcPhpGenerator
         {
             if (pushStateName.indexOf("::") < 0)
             {
-                pushStateName = mapName + "::" + pushStateName;
+                pushStateName = mapName + "." + pushStateName;
             }
         }
         pushStateName = phpStateName(pushStateName);
@@ -851,28 +777,21 @@ public final class SmcPhpGenerator
             {
                 // Yes, this is the first. This means an "if"
                 // should be used.
-                _source.print(_indent);
-                _source.print("if (");
-                _source.print(condition);
-                _source.println(") {");
+                //addCode(_indent);
+                jsFunc.addCode("if ("+condition+") {");
             }
             else if (condition.length() > 0)
             {
                 // No, this is not the first transition but it
                 // does have a condition. Use an "else if".
-                _source.println();
-                _source.print(_indent);
-                _source.print("elseif (");
-                _source.print(condition);
-                _source.println(") {");
+               // addCode(_indent);
+                 jsFunc.addCode("} elseif ("+condition+") {");
             }
             else
             {
                 // This is not the first transition and it has
                 // no condition.
-                _source.println();
-                _source.print(_indent);
-                _source.println("else {");
+                jsFunc.addCode("else {");
             }
         }
         // There is only one guard. Does this guard have
@@ -887,10 +806,8 @@ public final class SmcPhpGenerator
             // Yes there is a condition.
             indent2 = _indent + "    ";
 
-            _source.print(_indent);
-            _source.print("if (");
-            _source.print(condition);
-            _source.println(") {");
+            //addCode(_indent);
+            jsFunc.addCode("if ("+condition+") {");
         }
 
         // Now that the necessary conditions are in place, it's
@@ -914,11 +831,10 @@ public final class SmcPhpGenerator
             // prevents them from doing do.
             if (loopbackFlag == true)
             {
-                fqEndStateName = "$endState";
+                fqEndStateName = "endState";
 
-                _source.print(indent2);
-                _source.print(fqEndStateName);
-                _source.println(" = $fsm->getState();");
+                //addCode(indent2);
+                jsFunc.addCode(fqEndStateName+" = fsm.getState();");
             }
             else
             {
@@ -934,69 +850,8 @@ public final class SmcPhpGenerator
         if (transType == TransType.TRANS_POP ||
             loopbackFlag == false)
         {
-            if (_debugLevel >= DEBUG_LEVEL_1)
-            {
-                _source.print(indent2);
-                _source.println(
-                    "if ($fsm->getDebugFlag() == true) {");
-                _source.print(indent2);
-                _source.print(
-                    "    fwrite($fsm->getDebugStream(), \"");
-                _source.print("BEFORE EXIT     : ");
-                _source.print(stateName);
-                _source.println("->Exit_($fsm)\\n\");");
-                _source.print(indent2);
-                _source.println("}");
-            }
-
-            _source.print(indent2);
-            _source.println("$fsm->getState()->Exit_($fsm);");
-
-            if (_debugLevel >= DEBUG_LEVEL_1)
-            {
-                _source.print(indent2);
-                _source.println(
-                    "if ($fsm->getDebugFlag() == true) {");
-                _source.print(indent2);
-                _source.print(
-                    "    fwrite($fsm->getDebugStream(), \"");
-                _source.print("AFTER EXIT      : ");
-                _source.print(stateName);
-                _source.println("->Exit_($fsm)\\n\");");
-                _source.print(indent2);
-                _source.println("}");
-            }
-        }
-
-        if (_debugLevel >= DEBUG_LEVEL_0)
-        {
-            List<SmcParameter> parameters =
-                transition.getParameters();
-            Iterator<SmcParameter> pit;
-            String sep;
-
-            _source.print(indent2);
-            _source.println("if ($fsm->getDebugFlag()) {");
-            _source.print(indent2);
-            _source.print(
-                "    fwrite($fsm->getDebugStream(), \"");
-            _source.print("ENTER TRANSITION: ");
-            _source.print(stateName);
-            _source.print("->");
-            _source.print(transName);
-            _source.print("(");
-            for (pit = parameters.iterator(), sep = "";
-                 pit.hasNext() == true;
-                 sep = ", ")
-            {
-                _source.print(sep);
-                (pit.next()).accept(this);
-            }
-            _source.print(");");
-
-            _source.println("\\n\");");
-            _source.print(indent2);
-            _source.println("}");
+            //addCode(indent2);
+            jsFunc.addCode("fsm.getState().Exit_(fsm);");
         }
 
         // Dump out this transition's actions.
@@ -1011,8 +866,8 @@ public final class SmcPhpGenerator
             if (condition.length() > 0 ||
                 _guardCount > 1)
             {
-                _source.print(indent2);
-                _source.println("# No actions.");
+               // addCode(indent2);
+                jsFunc.addCode("/* No actions. */");
             }
             // If there are:
             // 1. No entry actions,
@@ -1030,12 +885,12 @@ public final class SmcPhpGenerator
                       exitActions.isEmpty() == true) &&
                      transType != TransType.TRANS_PUSH &&
                      transType != TransType.TRANS_POP &&
-                     loopbackFlag == true &&
-                     _debugLevel == NO_DEBUG_OUTPUT)
+                     loopbackFlag == true)/* &&
+                     _debugFlag == false)*/
             {
-                _source.print(indent2);
-                _source.println("# No actions.");
-                _source.print(indent2);
+              //  addCode(indent2);
+                jsFunc.addCode("/* No actions. */");
+              //  addCode(indent2);
             }
 
             indent3 = indent2;
@@ -1044,8 +899,8 @@ public final class SmcPhpGenerator
         {
             // Now that we are in the transition, clear the
             // current state.
-            _source.print(indent2);
-            _source.println("$fsm->clearState();");
+           // addCode(indent2);
+            jsFunc.addCode("fsm.clearState();");
 
             // v. 2.0.0: Place the actions inside a try/finally
             // block. This way the state will be set before an
@@ -1054,10 +909,10 @@ public final class SmcPhpGenerator
             // feature first.
             if (_noCatchFlag == false)
             {
-                _source.print(indent2);
-                _source.println("$exception = NULL;");
-                _source.print(indent2);
-                _source.println("try {");
+                //jsFunc.addCode(indent2);
+                jsFunc.addCode("var exception = null;");
+                jsFunc.addCode(indent2);
+                jsFunc.addCode("try {");
 
                 indent3 = indent2 + "    ";
             }
@@ -1083,42 +938,11 @@ public final class SmcPhpGenerator
             // http://bugs.php.net/bug.php?id=32100
             if (_noCatchFlag == false)
             {
-                _source.print(indent2);
-                _source.println("}");
-                _source.print(indent2);
-                _source.println("catch (Exception $exception) {}");
+                //addCode(indent2);
+                jsFunc.addCode("}");
+               // addCode(indent2);
+                jsFunc.addCode("catch (exception) {}");
             }
-        }
-
-        if (_debugLevel >= DEBUG_LEVEL_0)
-        {
-            List<SmcParameter> parameters =
-                transition.getParameters();
-            Iterator<SmcParameter> pit;
-            String sep;
-
-            _source.print(indent2);
-            _source.println("if ($fsm->getDebugFlag()) {");
-            _source.print(indent2);
-            _source.print(
-                "    fwrite($fsm->getDebugStream(), \"");
-            _source.print("EXIT TRANSITION : ");
-            _source.print(stateName);
-            _source.print("->");
-            _source.print(transName);
-            _source.print("(");
-            for (pit = parameters.iterator(), sep = "";
-                 pit.hasNext() == true;
-                 sep = ", ")
-            {
-                _source.print(sep);
-                (pit.next()).accept(this);
-            }
-            _source.print(");");
-
-            _source.println("\\n\");");
-            _source.print(indent2);
-            _source.println("}");
         }
 
         // Print the setState() call, if necessary. Do NOT
@@ -1129,10 +953,8 @@ public final class SmcPhpGenerator
             (actions.isEmpty() == false ||
              loopbackFlag == false))
         {
-            _source.print(indent2);
-            _source.print("$fsm->setState(");
-            _source.print(fqEndStateName);
-            _source.println(");");
+            //addCode(indent2);
+            jsFunc.addCode("fsm.setState("+fqEndStateName+");");
         }
         else if (transType == TransType.TRANS_PUSH)
         {
@@ -1142,59 +964,25 @@ public final class SmcPhpGenerator
             if (loopbackFlag == false ||
                 actions.isEmpty() == false)
             {
-                _source.print(indent2);
-                _source.print("$fsm->setState(");
-                _source.print(fqEndStateName);
-                _source.println(");");
+                //addCode(indent2);
+                jsFunc.addCode("fsm.setState("+fqEndStateName+");");
             }
 
             // Before doing the push, execute the end state's
             // entry actions (if any) if this is not a loopback.
             if (loopbackFlag == false)
             {
-                if (_debugLevel >= DEBUG_LEVEL_1)
-                {
-                    _source.print(indent2);
-                    _source.println(
-                        "if ($fsm->getDebugFlag() == true) {");
-                    _source.print(indent2);
-                    _source.print(
-                        "    fwrite($fsm->getDebugStream(), \"");
-                    _source.print("BEFORE ENTRY    : ");
-                    _source.print(fqEndStateName);
-                    _source.println("->Entry($fsm);\\n\");");
-                    _source.print(indent2);
-                    _source.println("}");
-                }
-
-                _source.print(indent2);
-                _source.println("$fsm->getState()->Entry($fsm);");
-
-                if (_debugLevel >= DEBUG_LEVEL_1)
-                {
-                    _source.print(indent2);
-                    _source.println(
-                        "if ($fsm->getDebugFlag() == true) {");
-                    _source.print(indent2);
-                    _source.print(
-                        "    fwrite($fsm->getDebugStream(), \"");
-                    _source.print("AFTER ENTRY     : ");
-                    _source.print(fqEndStateName);
-                    _source.println("->Entry($fsm);\\n\");");
-                    _source.print(indent2);
-                    _source.println("}");
-                }
+                //addCode(indent2);
+                jsFunc.addCode("fsm.getState().Entry(fsm);");
             }
 
-            _source.print(indent2);
-            _source.print("$fsm->pushState(");
-            _source.print(pushStateName);
-            _source.println(");");
+            //addCode(indent2);
+            jsFunc.addCode("fsm.pushState("+pushStateName+");");
         }
         else if (transType == TransType.TRANS_POP)
         {
-            _source.print(indent2);
-            _source.println("$fsm->popState();");
+            //addCode(indent2);
+            jsFunc.addCode("fsm.popState();");
         }
 
         // Perform the new state's enty actions.
@@ -1205,38 +993,8 @@ public final class SmcPhpGenerator
              loopbackFlag == false) ||
              transType == TransType.TRANS_PUSH)
         {
-            if (_debugLevel >= DEBUG_LEVEL_1)
-            {
-                _source.print(indent2);
-                _source.println(
-                    "if ($fsm->getDebugFlag() == true) {");
-                _source.print(indent2);
-                _source.print(
-                    "    fwrite($fsm->getDebugStream(), \"");
-                _source.print("BEFORE ENTRY    : ");
-                _source.print(fqEndStateName);
-                _source.println("->Entry($fsm);\\n\");");
-                _source.print(indent2);
-                _source.println("}");
-            }
-
-            _source.print(indent2);
-            _source.println("$fsm->getState()->Entry($fsm);");
-
-            if (_debugLevel >= DEBUG_LEVEL_1)
-            {
-                _source.print(indent2);
-                _source.println(
-                    "if ($fsm->getDebugFlag() == true) {");
-                _source.print(indent2);
-                _source.print(
-                    "    fwrite($fsm->getDebugStream(), \"");
-                _source.print("AFTER ENTRY     : ");
-                _source.print(fqEndStateName);
-                _source.println("->Entry($fsm);\\n\");");
-                _source.print(indent2);
-                _source.println("}");
-            }
+            //addCode(indent2);
+            jsFunc.addCode("fsm.getState().Entry(fsm);");
         }
 
         // If there was a try/finally, then put the closing
@@ -1246,12 +1004,8 @@ public final class SmcPhpGenerator
         // PHP: rethrow the exception to emulate finally.
         if (actions.size() > 0 && _noCatchFlag == false)
         {
-            _source.print(indent2);
-            _source.println("if ($exception != NULL) {");
-            _source.print(indent2);
-            _source.println("    throw $exception;");
-            _source.print(indent2);
-            _source.println("}");
+            //addCode(indent2);
+            jsFunc.addCode("if (exception) {    throw exception; }");
         }
 
         // If there is a transition associated with the pop, then
@@ -1262,22 +1016,17 @@ public final class SmcPhpGenerator
         {
             String popArgs = guard.getPopArgs();
 
-            _source.print(indent2);
-            _source.print("$fsm->");
-            _source.print(endStateName);
-            _source.print("(");
+            //addCode(indent2);
+            jsFunc.addCode("fsm."+endStateName+"(");
 
             // Output any and all pop arguments.
             if (popArgs.length() > 0)
             {
-                _source.print(popArgs);
-                _source.println();
-                _source.print(indent2);
-                _source.println(");");
+                jsFunc.addCode(popArgs+");");
             }
-            else
+            else 
             {
-                _source.println(");");
+                jsFunc.addCode(");");
             }
         }
 
@@ -1288,10 +1037,10 @@ public final class SmcPhpGenerator
         // generator whether all clauses have been done.
         if (_guardCount > 1)
         {
-            _source.print(_indent);
-            _source.print("}");
+           // addCode(_indent);
+            jsFunc.addCode("}");
         }
-
+        
         return;
     } // end of visit(SmcGuard)
 
@@ -1301,38 +1050,36 @@ public final class SmcPhpGenerator
      */
     public void visit(SmcAction action)
     {
+        
         String name = action.getName();
         Iterator<String> it;
         String sep;
-
+        JSFunction jsFunc = jsCode.getCurrentClass().getCurrentFunction();
         // Need to distinguish between FSMContext actions and
         // application class actions. If the action is
         // "emptyStateStack", then pass it to the context.
         // Otherwise, let the application class handle it.
         _source.print(_indent);
-        if ( action.isEmptyStateStack() == true)
+        if (name.equals("emptyStateStack") == true)
         {
-            _source.println("$fsm->emptyStateStack();");
+            jsFunc.addCode("fsm.");
         }
         else
         {
-        	if ( action.isStatic( )==false )
-        	{
-	            _source.print("$ctxt->");
-        	}
-	        _source.print(name);
-	        _source.print("(");
-
-	        for (it = action.getArguments().iterator(), sep = "";
-	             it.hasNext() == true;
-	             sep = ", ")
-	        {
-	            _source.print(sep);
-	            _source.print(it.next());
-	        }
-
-	        _source.println(");");
+            jsFunc.addCode("ctxt.");
         }
+        jsFunc.addCode(name);
+        jsFunc.addCode("(");
+
+        for (it = action.getArguments().iterator(), sep = "";
+             it.hasNext() == true;
+             sep = ", ")
+        {
+            jsFunc.addCode(sep);
+            jsFunc.addCode(it.next());
+        }
+
+        jsFunc.addCode(");");
 
         return;
     } // end of visit(SmcAction)
@@ -1375,7 +1122,7 @@ public final class SmcPhpGenerator
         {
             retval =
                 state.substring(0, index) +
-                "::$" +
+                "." +
                 state.substring(index + 2);
         }
 
@@ -1400,39 +1147,182 @@ public final class SmcPhpGenerator
 //---------------------------------------------------------------
 // Member data
 //
-} // end of class SmcPhpGenerator
+} // end of class SmcJSGenerator
+
+// JavaScript Code generator
+class JSCode {
+    private ArrayList<JSClass> jsClasses;
+    JSCode(){
+         jsClasses = new ArrayList<JSClass>();
+    }
+    public JSClass addClass(String name,String baseClass){
+        return addClass(name,baseClass,"","");
+    }
+    public JSClass addClass(String name,String baseClass,String params){
+        return addClass(name,baseClass,params,"");
+    }
+    public JSClass addClass(String name,String baseClass,String params,String code){
+         JSClass jsClass = new JSClass();
+         jsClass.setName(name);
+         jsClass.setBaseClass(baseClass);
+         jsClass.addParams(params);
+         jsClass.addConstructorCode(code);
+         jsClasses.add(jsClass);
+         return jsClass;
+    }
+    public JSClass getCurrentClass(){
+        return jsClasses.get(jsClasses.size()-1);
+    }
+    public String generateCode(){
+        String tmp="";
+        for(JSClass jsc:jsClasses){
+            tmp+=jsc.generateCode();
+        }
+        return tmp;
+    }
+    
+
+}
+class JSClass {
+    private String name;
+    private String baseClass;
+    private String argumentList;
+    private String constructorCode;
+    private HashMap<String,String> staticMembers;
+    private ArrayList<JSFunction> functionList;
+    public JSClass(){
+        this.constructorCode="";
+        this.argumentList="";
+        staticMembers = new HashMap<String,String>();
+    }
+    public void setName(String cn){
+        this.name = cn;
+    }
+    public void setBaseClass(String bc){
+        this.baseClass = bc;
+    }
+    public JSClass addParams(String p){
+        if(argumentList==null||argumentList.length()<1){
+            argumentList=p;
+        } else {
+            argumentList+=","+p;
+        }
+        functionList = new ArrayList<JSFunction>();
+        return this;
+    }
+    public JSClass addConstructorCode(String cc){
+        this.constructorCode += cc;
+        return this;
+    }
+    public void setFunctionList(ArrayList<JSFunction> fl){
+        this.functionList = fl;
+    }
+
+    public JSClass addFunction(String name){
+        return addFunction(name,"");
+    }
+    public JSClass addFunction(String name,String arg){
+        return addFunction(name,arg,"");
+    }
+    public JSClass addFunction(String name,String arg,String code){
+        JSFunction jsFunc = new JSFunction();
+        jsFunc.setName(name);
+        jsFunc.setArgumentList(arg);
+        jsFunc.addCode(code);
+        functionList.add(jsFunc);
+        return this;
+    }
+    public JSClass addStaticMember(String key,String val){
+        staticMembers.put(key,val);
+        return this;
+    }
+    public JSFunction getCurrentFunction(){
+        return functionList.get(functionList.size()-1);
+    }
+    public String getBaseClass(){
+        return baseClass;
+    }
+    public String generateCode(){
+        String tmpl="";
+        tmpl+="function "+name+" ("+argumentList+"){\n";
+        if(baseClass!=null&&baseClass.length()>0){
+            tmpl+=baseClass+".apply(this,arguments);\n";
+        }
+        tmpl+=constructorCode+"\n}\n";
+        tmpl+="\n"+name+".prototype=State.mixin(";
+        if(baseClass!=null&&baseClass.length()>0){
+            tmpl+="new "+baseClass+"()";
+        } else {
+            tmpl+="{}";
+        }
+        tmpl+=",{\n";
+        String comma="";
+        for(JSFunction jsFunction:functionList){
+            tmpl+=comma+jsFunction.generateCode()+"\n";
+            comma=",";
+        }
+        tmpl+="\n});\n";
+        for(Map.Entry<String,String> me : staticMembers.entrySet()){
+            String key = me.getKey();
+            String val = me.getValue();
+            tmpl+=name+"."+key+"="+val+";\n";
+        }
+        return tmpl;
+    }
+}
+
+class JSFunction {
+    private String name;
+    private String argumentList;
+    private String functionCode;
+    JSFunction(){
+        functionCode="";
+    }
+    public void setName(String fn){
+        name = fn;
+    }
+    public void setArgumentList(String al){
+        argumentList = al;
+    }
+    public String getArgumentList(){
+        return argumentList;
+    }
+    public JSFunction addParams(String p){
+        if(p!=null&&p.length()>0){
+            argumentList+=","+p;
+        } else {
+            argumentList = p;
+        }
+        return this;
+    }
+    public void setCode(String fc){
+        functionCode = fc;
+    }
+    public JSFunction addCode(String fc){
+        functionCode+=fc;
+        return this;
+    }
+    public String generateCode(){
+        return name+":function("+argumentList+") {\n"+functionCode+"\n}";
+    }
+}
+
+
 
 //
 // CHANGE LOG
-// $Log: SmcPhpGenerator.java,v $
-// Revision 1.12  2013/07/14 14:32:38  cwrapp
+// $Log: SmcJSGenerator.java,v $
+// Revision 1.4  2013/07/14 14:32:38  cwrapp
 // check in for release 6.2.0
 //
-// Revision 1.11  2011/11/20 14:58:33  cwrapp
-// Check in for SMC v. 6.1.0
+// Revision 1.3  2011/02/16 18:02:01  nitin-nizhawan
+// added prototype channing to allow instanceof operator to work
 //
-// Revision 1.10  2010/03/15 13:15:03  fperrad
-// fix multi guard
+// Revision 1.2  2011/02/14 21:29:56  nitin-nizhawan
+// corrected some build errors
 //
-// Revision 1.9  2009/12/17 19:51:43  cwrapp
-// Testing complete.
-//
-// Revision 1.8  2009/11/27 17:19:21  fperrad
-// Implemented feature req. #2718892 for Lua, Perl, PHP, Python, Ruby &Scala
-//
-// Revision 1.7  2009/11/25 22:30:19  cwrapp
-// Fixed problem between %fsmclass and sm file names.
-//
-// Revision 1.6  2009/11/24 20:42:39  cwrapp
-// v. 6.0.1 update
-//
-// Revision 1.5  2009/10/06 15:31:59  kgreg99
-// 1. Started implementation of feature request #2718920.
-//     1.1 Added method boolean isStatic() to SmcAction class. It returns false now, but is handled in following language generators: C#, C++, java, php, VB. Instance identificator is not added in case it is set to true.
-// 2. Resolved confusion in "emtyStateStack" keyword handling. This keyword was not handled in the same way in all the generators. I added method boolean isEmptyStateStack() to SmcAction class. This method is used instead of different string comparisons here and there. Also the generated method name is fixed, not to depend on name supplied in the input sm file.
-//
-// Revision 1.4  2009/09/05 15:39:20  cwrapp
-// Checking in fixes for 1944542, 1983929, 2731415, 2803547 and feature 2797126.
+// Revision 1.1  2011/02/14 18:32:04  nitin-nizhawan
+// added generator class for JavaScript
 //
 // Revision 1.3  2009/04/22 20:26:29  fperrad
 // Added enterStartState method

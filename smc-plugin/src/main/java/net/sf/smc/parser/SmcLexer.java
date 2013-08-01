@@ -13,7 +13,7 @@
 //
 // The Initial Developer of the Original Code is Charles W. Rapp.
 // Portions created by Charles W. Rapp are
-// Copyright � 2000 - 2006, 2008. Charles W. Rapp.
+// Copyright (C) 2000 - 2006, 2008. Charles W. Rapp.
 // All Rights Reserved.
 //
 // Contributor(s):
@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcLexer.java,v 1.5 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcLexer.java,v 1.6 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -35,8 +35,8 @@
 package net.sf.smc.parser;
 
 import java.io.EOFException;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Deque;
@@ -517,6 +517,7 @@ import java.util.Map;
             Character openChar;
             int openIndex;
             int closeIndex;
+            int quoteIndex;
             boolean quoteFlag = false;
             char quoteChar = ' ';
             boolean escapeFlag = false;
@@ -559,7 +560,8 @@ import java.util.Map;
                     }
                     // Is this a quote charater?
                     else if (
-                        (_quoteList.indexOf(_currentChar)) >= 0)
+                        (quoteIndex =
+                         _quoteList.indexOf(_currentChar)) >= 0)
                     {
                         // Is this the opening quote?
                         if (quoteFlag == false)
@@ -987,7 +989,7 @@ import java.util.Map;
             int i;
             Class<SmcLexerContext> fsmClass =
                 SmcLexerContext.class;
-            Class<?>[] paramTypes = new Class[0];
+            Class[] paramTypes = new Class[0];
             Method unicode;
             Method whitespace;
             Method alpha;
@@ -1230,6 +1232,9 @@ import java.util.Map;
 //
 // CHANGE LOG
 // $Log: SmcLexer.java,v $
+// Revision 1.6  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.5  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

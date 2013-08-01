@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcGuard.java,v 1.3 2009/10/06 15:31:59 kgreg99 Exp $
+// $Id: SmcGuard.java,v 1.4 2012/04/10 19:25:35 fperrad Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,8 +34,10 @@
 
 package net.sf.smc.model;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -231,14 +233,18 @@ public final class SmcGuard
              (_condition.indexOf("ctxt ") >= 0 ||
               _condition.indexOf("ctxt.") >= 0 ||
               _condition.indexOf("ctxt->") >= 0 ||
-              _condition.indexOf("ctxt:") >= 0)) ||
+              _condition.indexOf("ctxt:") >= 0 ||
+              _condition.indexOf("ctxt,") >= 0 ||
+              _condition.indexOf("ctxt)") >= 0)) ||
             _hasActions() == true ||
             (_transType == TransType.TRANS_POP &&
              _popArgs != null &&
              (_popArgs.indexOf("ctxt ") >= 0 ||
               _popArgs.indexOf("ctxt.") >= 0 ||
               _popArgs.indexOf("ctxt->") >= 0 ||
-              _popArgs.indexOf("ctxt:") >= 0)))
+              _popArgs.indexOf("ctxt:") >= 0 ||
+              _popArgs.indexOf("ctxt,") >= 0 ||
+              _popArgs.indexOf("ctxt)") >= 0)))
         {
             retcode = true;
         }
@@ -382,7 +388,6 @@ public final class SmcGuard
     // Scope the state name. If the state is unscoped, then
     // return "<mapName>.<stateName>". If the state named
     // contains the scope string "::", replace that with a ".".
-    @SuppressWarnings("unused")
     private String _scopeStateName(final String stateName,
                                    final String mapName)
     {
@@ -448,6 +453,9 @@ public final class SmcGuard
 //
 // CHANGE LOG
 // $Log: SmcGuard.java,v $
+// Revision 1.4  2012/04/10 19:25:35  fperrad
+// fix 3513161 : ctxt detection in guard (for C)
+//
 // Revision 1.3  2009/10/06 15:31:59  kgreg99
 // 1. Started implementation of feature request #2718920.
 //     1.1 Added method boolean isStatic() to SmcAction class. It returns false now, but is handled in following language generators: C#, C++, java, php, VB. Instance identificator is not added in case it is set to true.

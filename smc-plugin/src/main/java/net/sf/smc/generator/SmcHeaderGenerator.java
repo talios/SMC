@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcHeaderGenerator.java,v 1.7 2010/02/15 18:05:43 fperrad Exp $
+// $Id: SmcHeaderGenerator.java,v 1.8 2012/04/21 10:04:06 fperrad Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,13 +34,14 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcFSM;
+import net.sf.smc.model.SmcGuard;
 import net.sf.smc.model.SmcMap;
 import net.sf.smc.model.SmcParameter;
 import net.sf.smc.model.SmcState;
@@ -242,13 +243,6 @@ public final class SmcHeaderGenerator
         {
             _source.print(_indent);
             _source.print(declaration);
-
-            // Add a semicolon if the user did not use one.
-            if (declaration.endsWith(";") == false)
-            {
-                _source.print(";");
-            }
-
             _source.println();
         }
         _source.println();
@@ -728,6 +722,7 @@ public final class SmcHeaderGenerator
     public void visit(SmcState state)
     {
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String fsmClassName = map.getFSM().getFsmClassName();
         String mapName = map.getName();
         String stateName = state.getClassName();
@@ -868,6 +863,9 @@ public final class SmcHeaderGenerator
 //
 // CHANGE LOG
 // $Log: SmcHeaderGenerator.java,v $
+// Revision 1.8  2012/04/21 10:04:06  fperrad
+// fix 3518773 : remove additional ';' with '%declare'
+//
 // Revision 1.7  2010/02/15 18:05:43  fperrad
 // fix 2950619 : make distinction between source filename (*.sm) and target filename.
 //

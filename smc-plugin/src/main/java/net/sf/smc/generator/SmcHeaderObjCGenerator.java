@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcHeaderObjCGenerator.java,v 1.7 2009/11/25 22:30:19 cwrapp Exp $
+// $Id: SmcHeaderObjCGenerator.java,v 1.8 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,12 +34,14 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.Iterator;
 import java.util.List;
-
+import java.util.StringTokenizer;
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcFSM;
+import net.sf.smc.model.SmcGuard;
 import net.sf.smc.model.SmcMap;
 import net.sf.smc.model.SmcParameter;
 import net.sf.smc.model.SmcState;
@@ -94,12 +96,17 @@ public final class SmcHeaderObjCGenerator
      */
     public void visit(SmcFSM fsm)
     {
+        String srcfileCaps;
+        String packageName = fsm.getPackage();
         String context = fsm.getContext();
         String fsmClassName = fsm.getFsmClassName();
         String mapName;
         List<SmcTransition> transList;
         String separator;
+        List<SmcParameter> params;
         Iterator<SmcParameter> pit;
+        int packageDepth = 0;
+        int index;
 
         _source.println("/*");
         _source.println(" * ex: set ro:");
@@ -451,6 +458,7 @@ public final class SmcHeaderObjCGenerator
     public void visit(SmcState state)
     {
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String fsmClassName = map.getFSM().getFsmClassName();
         String mapName = map.getName();
         String stateName = state.getClassName();
@@ -483,7 +491,7 @@ public final class SmcHeaderObjCGenerator
         if (actions != null && actions.size() > 0)
         {
             _source.print(_indent);
-            _source.print(" -(void)Entry:(");
+            _source.print(" -(void)Exit:(");
             _source.print(fsmClassName);
             _source.println("*)context;");        }
 
@@ -513,6 +521,7 @@ public final class SmcHeaderObjCGenerator
     public void visit(SmcTransition transition)
     {
         SmcState state = transition.getState();
+        String stateName = state.getClassName();
 
         _source.print(_indent);
         _source.print("- (void)");
@@ -563,6 +572,9 @@ public final class SmcHeaderObjCGenerator
 //
 // CHANGE LOG
 // $Log: SmcHeaderObjCGenerator.java,v $
+// Revision 1.8  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.7  2009/11/25 22:30:19  cwrapp
 // Fixed problem between %fsmclass and sm file names.
 //

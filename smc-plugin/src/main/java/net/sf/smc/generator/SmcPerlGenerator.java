@@ -30,7 +30,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcPerlGenerator.java,v 1.13 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcPerlGenerator.java,v 1.14 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -38,10 +38,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -103,7 +103,9 @@ public final class SmcPerlGenerator
         String startState = fsm.getStartState();
         List<SmcMap> maps = fsm.getMaps();
         List<SmcTransition> transitions;
+        List<SmcParameter> params;
         String transName;
+        int index;
 
         _source.println("# ex: set ro:");
         _source.println("# DO NOT EDIT.");
@@ -459,7 +461,7 @@ public final class SmcPerlGenerator
             _source.print('.');
             _source.print(state.getClassName());
             _source.print("', ");
-            _source.print(map.getNextStateId());
+            _source.print(SmcMap.getNextStateId());
             _source.println(");");
         }
 
@@ -650,6 +652,7 @@ public final class SmcPerlGenerator
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
@@ -1009,10 +1012,8 @@ public final class SmcPerlGenerator
         // Dump out this transition's actions.
         if (actions.isEmpty() == true)
         {
-            @SuppressWarnings("unused")
             List<SmcAction> entryActions =
                 state.getEntryActions();
-            @SuppressWarnings("unused")
             List<SmcAction> exitActions = state.getExitActions();
 
             if (condition.length() > 0)
@@ -1365,6 +1366,9 @@ public final class SmcPerlGenerator
 //
 // CHANGE LOG
 // $Log: SmcPerlGenerator.java,v $
+// Revision 1.14  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.13  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

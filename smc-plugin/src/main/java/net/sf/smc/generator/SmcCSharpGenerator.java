@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcCSharpGenerator.java,v 1.12 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcCSharpGenerator.java,v 1.13 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -34,10 +34,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -1030,7 +1030,7 @@ public final class SmcCSharpGenerator
             _source.print(".");
             _source.print(state.getClassName());
             _source.print("\", ");
-            _source.print(map.getNextStateId());
+            _source.print(SmcMap.getNextStateId());
             _source.println(");");
         }
 
@@ -1862,6 +1862,7 @@ public final class SmcCSharpGenerator
         {
             List<SmcParameter> parameters =
                 transition.getParameters();
+            String sep;
 
             _source.println("#if TRACE");
             _source.print(indent2);
@@ -1950,6 +1951,7 @@ public final class SmcCSharpGenerator
         {
             List<SmcParameter> parameters =
                 transition.getParameters();
+            String sep;
 
             _source.println("#if TRACE");
             _source.print(indent3);
@@ -2237,6 +2239,9 @@ public final class SmcCSharpGenerator
 //
 // CHANGE LOG
 // $Log: SmcCSharpGenerator.java,v $
+// Revision 1.13  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.12  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //

@@ -35,8 +35,9 @@
 package net.sf.smc;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-
+import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
 import net.sf.smc.model.SmcFSM;
@@ -142,6 +143,7 @@ public final class SmcSyntaxChecker
         String startState = fsm.getStartState();
         String context = fsm.getContext();
         String header = fsm.getHeader();
+        int headerLine = fsm.getHeaderLine();
 
         // Check if the start state and class has been
         // specified (and header file for C++ generation).
@@ -322,6 +324,7 @@ public final class SmcSyntaxChecker
     public void visit(SmcGuard guard)
     {
         String endState = guard.getEndState();
+        String condition = guard.getCondition();
 
         // Ignore pop transitions.
         if (guard.getTransType() == TransType.TRANS_POP)

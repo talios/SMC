@@ -26,7 +26,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcParser.java,v 1.10 2011/11/20 16:29:53 cwrapp Exp $
+// $Id: SmcParser.java,v 1.11 2013/07/14 14:32:39 cwrapp Exp $
 //
 // CHANGE LOG
 // (See bottom of file.)
@@ -261,6 +261,17 @@ public final class SmcParser
     {
         return (_mapInProgress.isKnownState(name));
     } // end of isDuplicateState(String)
+
+    /**
+     * Returns {@code true} if the in-progress state is the
+     * default state and {@code false} otherwise.
+     * @return {@code true} if the in-progress state is the
+     * default state.
+     */
+    /* package */ boolean isDefaultState()
+    {
+        return (_stateInProgress.isDefaultState());
+    } // end of isDefaultState()
 
     //
     // end of State Machine Guards
@@ -580,6 +591,7 @@ public final class SmcParser
 
     /* package */ void createState(String name, int lineNumber)
     {
+        SmcState retval;
 
         if (_stateInProgress != null)
         {
@@ -736,6 +748,8 @@ public final class SmcParser
         }
         else
         {
+            String name;
+            SmcTransition transition;
 
             // Check if this state already has a transition with
             // this name. If so, then reuse that object.
@@ -1526,7 +1540,7 @@ public final class SmcParser
         {
             Class<SmcParserContext> fsmClass =
                 SmcParserContext.class;
-            Class<?>[] paramTypes = new Class[1];
+            Class[] paramTypes = new Class[1];
 
             paramTypes[0] = SmcLexer.Token.class;
 
@@ -1670,6 +1684,9 @@ public final class SmcParser
 //
 // CHANGE LOG
 // $Log: SmcParser.java,v $
+// Revision 1.11  2013/07/14 14:32:39  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.10  2011/11/20 16:29:53  cwrapp
 // Check in for SMC v. 6.1.0
 //

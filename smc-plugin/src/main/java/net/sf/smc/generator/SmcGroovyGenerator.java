@@ -32,7 +32,7 @@
 //   and examples/ObjC.
 //
 // RCS ID
-// $Id: SmcGroovyGenerator.java,v 1.12 2011/11/20 14:58:33 cwrapp Exp $
+// $Id: SmcGroovyGenerator.java,v 1.13 2013/07/14 14:32:38 cwrapp Exp $
 //
 // CHANGE LOG
 // (See the bottom of this file.)
@@ -40,10 +40,10 @@
 
 package net.sf.smc.generator;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -520,7 +520,7 @@ public final class SmcGroovyGenerator
             _source.print('.');
             _source.print(state.getClassName());
             _source.print("', id:");
-            _source.print(map.getNextStateId());
+            _source.print(SmcMap.getNextStateId());
             _source.println(")");
         }
 
@@ -545,6 +545,7 @@ public final class SmcGroovyGenerator
     public void visit(SmcState state)
     {
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         List<SmcAction> actions;
@@ -698,6 +699,7 @@ public final class SmcGroovyGenerator
     {
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         String transName = transition.getName();
@@ -705,6 +707,7 @@ public final class SmcGroovyGenerator
             transition.getParameters();
         List<SmcGuard> guards = transition.getGuards();
         boolean nullCondition = false;
+        Iterator<SmcParameter> pit;
         Iterator<SmcGuard> git;
         SmcGuard guard;
 
@@ -822,6 +825,7 @@ public final class SmcGroovyGenerator
         SmcTransition transition = guard.getTransition();
         SmcState state = transition.getState();
         SmcMap map = state.getMap();
+        String context = map.getFSM().getContext();
         String mapName = map.getName();
         String stateName = state.getClassName();
         String transName = transition.getName();
@@ -1344,6 +1348,9 @@ public final class SmcGroovyGenerator
 //
 // CHANGE LOG
 // $Log: SmcGroovyGenerator.java,v $
+// Revision 1.13  2013/07/14 14:32:38  cwrapp
+// check in for release 6.2.0
+//
 // Revision 1.12  2011/11/20 14:58:33  cwrapp
 // Check in for SMC v. 6.1.0
 //
