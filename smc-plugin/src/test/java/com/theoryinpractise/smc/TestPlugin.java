@@ -56,7 +56,10 @@ public class TestPlugin {
 
     @Test
     public void testGenerate() throws Exception {
-        File tempDir = File.createTempFile("smc", "generated", new File("."));
+        File tempDir = File.createTempFile("smc", "generated");
+
+        System.out.println("TempDir is " + tempDir.getAbsolutePath());
+
         try {
             MavenProject project = mock(MavenProject.class);
             when(project.getBasedir()).thenReturn(tempDir);
@@ -75,7 +78,9 @@ public class TestPlugin {
             plugin.setProject(project);
             plugin.setReflection(true);
             plugin.setSerial(true);
-            plugin.setSmDirectory("../src/test/resources/sm");
+            File smDirectory = new File("src/test/resources/sm");
+            System.out.println("smDir is " + smDirectory.getAbsolutePath());
+            plugin.setSmDirectory(smDirectory);
             plugin.setSync(true);
             plugin.setTable(true);
             plugin.setTarget("java");
@@ -102,7 +107,7 @@ public class TestPlugin {
             assertTrue("TaskManagerFSM.java not generated",
                        new File(packageDir, "TaskManagerFSM.java").exists());
         } finally {
-            deleteDirectory(tempDir);
+//            deleteDirectory(tempDir);
         }
     }
 }

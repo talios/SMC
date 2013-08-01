@@ -25,15 +25,14 @@
  */
 package com.theoryinpractise.smc;
 
-import java.io.File;
-import java.io.FilenameFilter;
-import java.util.ArrayList;
-
 import net.sf.smc.Smc;
-
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.project.MavenProject;
+
+import java.io.File;
+import java.io.FilenameFilter;
+import java.util.ArrayList;
 
 /**
  * @author hhildebrand
@@ -129,7 +128,7 @@ public class Plugin extends AbstractMojo {
      * 
      * @parameter
      */
-    private String       smDirectory     = "src/main/sm";
+    private File         smDirectory     = new File("src/main/sm");
 
     /**
      * May be used only with the java, groovy, scala, vb and csharp target
@@ -185,19 +184,17 @@ public class Plugin extends AbstractMojo {
             docDirectory = targetDirectory;
         }
 
-        ArrayList<String> commonArgs = new ArrayList<String>();
+        ArrayList<String> commonArgs = new ArrayList<>();
 
         commonArgs.add("-return");
         File targetDir = new File(project.getBasedir(), targetDirectory);
         targetDir.mkdirs();
 
-        File srcDir = new File(project.getBasedir(), smDirectory);
-
-        project.addCompileSourceRoot(srcDir.getAbsolutePath());
+        project.addCompileSourceRoot(smDirectory.getAbsolutePath());
         project.addCompileSourceRoot(targetDir.getAbsolutePath());
 
-        ArrayList<String> sources = new ArrayList<String>();
-        File[] list = srcDir.listFiles(new FilenameFilter() {
+        ArrayList<String> sources = new ArrayList<>();
+        File[] list = smDirectory.listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
                 return name.endsWith(".sm");
@@ -210,7 +207,7 @@ public class Plugin extends AbstractMojo {
             sources.add(source.getAbsolutePath());
         }
 
-        ArrayList<String> args = new ArrayList<String>(commonArgs);
+        ArrayList<String> args = new ArrayList<>(commonArgs);
 
         switch (debugLevel) {
             case 0:
@@ -259,7 +256,7 @@ public class Plugin extends AbstractMojo {
         commonArgs.add(docDir.getAbsolutePath());
 
         if (graph) {
-            args = new ArrayList<String>(commonArgs);
+            args = new ArrayList<>(commonArgs);
             args.add("-graph");
             switch (graphLevel) {
                 case 0:
@@ -279,7 +276,7 @@ public class Plugin extends AbstractMojo {
         }
 
         if (table) {
-            args = new ArrayList<String>(commonArgs);
+            args = new ArrayList<>(commonArgs);
             args.add("-table");
             args.addAll(sources);
 
@@ -364,7 +361,7 @@ public class Plugin extends AbstractMojo {
      * @param smDirectory
      *            the smDirectory to set
      */
-    public void setSmDirectory(String smDirectory) {
+    public void setSmDirectory(File smDirectory) {
         this.smDirectory = smDirectory;
     }
 

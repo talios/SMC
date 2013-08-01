@@ -41,13 +41,14 @@
 							<goal>generate</goal>
 						</goals>
 						<configuration>
+                            <smDirectory>src/main/sm</smDirectory>
 							<targetDirectory>target/generated-sources/sm</targetDirectory>
 							<docDirectory>doc</docDirectory>
 							<table>true</table>
 							<graph>true</graph>
 							<graphLevel>2</graphLevel>
 							<verbose>true</verbose>
-							<serialize>true</serialize>
+							<serial>true</serial>
 							<sync>true</sync>
 						</configuration>
 					</execution>
