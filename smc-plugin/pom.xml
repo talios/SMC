@@ -5,11 +5,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<artifactId>smc.app</artifactId>
-		<groupId>com.salesforce.smc</groupId>
-		<version>0.0.1-SNAPSHOT</version>
+		<groupId>com.theoryinpractise</groupId>
+		<version>6.2.0-SNAPSHOT</version>
 	</parent>
 	<artifactId>smc-plugin</artifactId>
-	<version>6.1.0-SNAPSHOT</version>
+	<version>6.2.0-SNAPSHOT</version>
 	<packaging>maven-plugin</packaging>
 	<name>smc-plugin Maven Plugin</name>
 	<url>http://maven.apache.org</url>

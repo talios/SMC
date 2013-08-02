@@ -23,16 +23,16 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-package com.salesforce.smc;
+package com.theoryinpractise.smc;
+
+import org.apache.maven.project.MavenProject;
+import org.junit.Test;
+
+import java.io.File;
 
 import static junit.framework.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.io.File;
-
-import org.apache.maven.project.MavenProject;
-import org.junit.Test;
 
 /**
  * 

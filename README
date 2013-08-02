@@ -12,7 +12,7 @@ SMC Mavn plugin is built using Maven 3.x.  You can build the project by cd'ing i
 To use the plugin, you need to include the following in your maven plugin configuration:
 
 			<plugin>
-				<groupId>com.salesforce.smc</groupId>
+				<groupId>com.theoryinpractise</groupId>
 				<artifactId>smc-plugin</artifactId>
 				<version>6.1.0-SNAPSHOT</version>
 				<executions>
@@ -36,7 +36,7 @@ To use the plugin, you need to include the following in your maven plugin config
 				</executions>
 			</plugin>
 			
-The configuration is documented in the plugin java doc (see com.salesforce.smc.Plugin in the smc-plugin module).  These parameters follow the original SMC generator arguments.
+The configuration is documented in the plugin java doc (see com.theoryinpractise.smc.Plugin in the smc-plugin module).  These parameters follow the original SMC generator arguments.
 
 The maven plugin is available from my CI repository: 
 
