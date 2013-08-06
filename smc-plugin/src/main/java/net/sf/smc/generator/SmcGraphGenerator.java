@@ -34,11 +34,6 @@
 
 package net.sf.smc.generator;
 
-import java.io.PrintStream;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -49,6 +44,11 @@ import net.sf.smc.model.SmcParameter;
 import net.sf.smc.model.SmcState;
 import net.sf.smc.model.SmcTransition;
 import net.sf.smc.model.SmcVisitor;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Visits the abstract syntax tree, emitting a Graphviz diagram.
@@ -101,6 +101,8 @@ public final class SmcGraphGenerator
         _source.print("digraph ");
         _source.print(_srcfileBase);
         _source.println(" {");
+        _source.println();
+        _source.println("    rankdir=LR;");
         _source.println();
         _source.println("    node");
         _source.println("        [shape=Mrecord width=1.5];");
@@ -836,7 +838,7 @@ public final class SmcGraphGenerator
 
             _source.print("\\]");
         }
-        _source.print("/\\l");
+        _source.print("\\l");
 
         // Graph Level 1, 2: output actions.
         if (_graphLevel > GRAPH_LEVEL_0 &&
