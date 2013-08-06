@@ -34,15 +34,6 @@
 
 package net.sf.smc.generator;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-
 import net.sf.smc.model.SmcAction;
 import net.sf.smc.model.SmcElement;
 import net.sf.smc.model.SmcElement.TransType;
@@ -53,6 +44,14 @@ import net.sf.smc.model.SmcParameter;
 import net.sf.smc.model.SmcState;
 import net.sf.smc.model.SmcTransition;
 import net.sf.smc.model.SmcVisitor;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Visits the abstract syntax tree, emitting Java code.
@@ -584,7 +583,11 @@ public final class SmcJavaGenerator extends SmcCodeGenerator {
         _source.println(
             "                new statemap.TransitionUndefinedException(");
         _source.println(
-            "                    \"State: \" +");
+            "                    \"Owner: \" +");
+        _source.println(
+            "                    context.getName() +");
+        _source.println(
+            "                    \", State: \" +");
         _source.println(
             "                    context.getState().getName() +");
         _source.println(
